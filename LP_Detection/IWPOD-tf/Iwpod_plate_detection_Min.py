@@ -5,6 +5,8 @@ from src.keras_utils import detect_lp_width
 from src.keras_utils import load_model
 from src.utils import im2single
 
+from LP_Detection import imread_uni
+
 
 def find_lp_corner(img_orig):
     lp_threshold = 0.35  # default 0.35
@@ -30,11 +32,6 @@ def find_lp_corner(img_orig):
         return [0]
 
 
-def image_read(img_path):
-    img_temp = np.fromfile(img_path, np.uint8)
-    return cv2.imdecode(img_temp, cv2.IMREAD_COLOR)
-
-
 def cal_center(pre_cen):
     x_coords = [point[0] for point in pre_cen]
     y_coords = [point[1] for point in pre_cen]
@@ -47,7 +44,7 @@ def cal_center(pre_cen):
 
 if __name__ == '__main__':
     img_path = "../sample_image/15622738_P1-1_18어9528.jpg"
-    img = image_read(img_path)
+    img = imread_uni(img_path)
     x = find_lp_corner(img)
     y = cal_center(x)
     print(x)
