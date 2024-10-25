@@ -14,10 +14,7 @@
 ![image](https://github.com/user-attachments/assets/7531b017-16f9-472d-800c-c1ef55f94a99)
 
 
-~~`conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0`~~
-
-
-위에 명령이 잘 안먹힘. 아래걸로 conda update해서 사용
+~~`conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0`~~   <-- 이 명령이 잘 안먹힘. 아래 4줄로 해결
 
 `conda update -n base -c defaults conda`
 
@@ -60,4 +57,7 @@
 
 `pip install bidict`
 
+### OpenCV
+
+`pip install opencv-python==4.10.0.84`
 
