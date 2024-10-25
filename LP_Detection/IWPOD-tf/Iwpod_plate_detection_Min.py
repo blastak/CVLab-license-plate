@@ -43,7 +43,7 @@ def cal_center(pre_cen):
 
 
 if __name__ == '__main__':
-    img_path = "../sample_image/15622738_P1-1_18어9528.jpg"
+    img_path = "../sample_image/seoulmp4_001036359jpg.jpg"
     img = imread_uni(img_path)
     x = find_lp_corner(img)
     y = cal_center(x)
@@ -53,6 +53,8 @@ if __name__ == '__main__':
     img_bb_qb = img.copy()
     cv2.rectangle(img_bb_qb, y[0], y[1], (255, 255, 0), 3)  # bounding box
     cv2.polylines(img_bb_qb, [np.int32(x)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+    cv2.namedWindow('img_bb_qb', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img_bb_qb', tuple(map(lambda x: int(x * 0.9), (1920, 1080))))
     cv2.imshow('img_bb_qb', img_bb_qb)
     cv2.waitKey()
 
