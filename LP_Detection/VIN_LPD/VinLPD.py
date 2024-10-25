@@ -1,7 +1,7 @@
 import cv2
 
 from LP_Detection import OcvYoloBase
-from LP_Detection import imread_uni
+from Utils import imread_uni
 
 
 class VinLPD(OcvYoloBase):

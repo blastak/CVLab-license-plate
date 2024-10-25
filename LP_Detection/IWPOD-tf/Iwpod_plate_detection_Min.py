@@ -5,7 +5,7 @@ from src.keras_utils import detect_lp_width
 from src.keras_utils import load_model
 from src.utils import im2single
 
-from LP_Detection import imread_uni
+from Utils import imread_uni
 
 
 def find_lp_corner(img_orig):
