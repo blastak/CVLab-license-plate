@@ -7,6 +7,7 @@ from Utils import imread_uni
 from src.keras_utils import detect_lp_width
 from src.keras_utils import load_model
 from src.utils import im2single
+from LP_Detection import BBox
 
 
 def find_lp_corner(img_orig):
@@ -20,27 +21,28 @@ def find_lp_corner(img_orig):
     ASPECTRATIO = 1
     WPODResolution = 480  # larger if full image is used directly
     lp_output_resolution = tuple(ocr_input_size[::-1])
-    Llp, LlpImgs, _ = detect_lp_width(iwpod_net, im2single(Ivehicle), WPODResolution * ASPECTRATIO, 2 ** 4, lp_output_resolution, lp_threshold)
+    Llp, LlpImgs, _ = detect_lp_width(iwpod_net, im2single(Ivehicle), WPODResolution * ASPECTRATIO, 2 ** 4,
+                                      lp_output_resolution, lp_threshold)
 
     xys2_list = []
     for j, img in enumerate(LlpImgs):
         pts = Llp[j].pts * iwh
         xys2 = np.transpose(pts.astype(np.int32))
         xys2_list.append(xys2.tolist())
-    if xys2_list:
-        return xys2_list
-    else:
-        return 0
+    return xys2_list
 
 
 def cal_BB(pre_cen):
-    x_coords = [point[0] for point in pre_cen]
-    y_coords = [point[1] for point in pre_cen]
-    min_x = min(x_coords)
-    max_x = max(x_coords)
-    min_y = min(y_coords)
-    max_y = max(y_coords)
-    return [[min_x, min_y], [max_x, max_y]]
+    BB_list = []
+    for i in range(len(pre_cen)):
+        x_coords = [point[0] for point in pre_cen[i]]
+        y_coords = [point[1] for point in pre_cen[i]]
+        min_x = min(x_coords)
+        max_x = max(x_coords)
+        min_y = min(y_coords)
+        max_y = max(y_coords)
+        BB_list.append(BBox(min_x, min_y, max_x - min_x, max_y - min_y))
+    return BB_list
 
 
 def save_csv(data, path):
@@ -70,7 +72,8 @@ def load_csv(path):
 
 
 if __name__ == '__main__':
-    img_path = "../sample_image/seoulmp4_001036359jpg.jpg"
+    # img_path = "../sample_image/seoulmp4_001036359jpg.jpg"
+    img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
     img = imread_uni(img_path)
     x = find_lp_corner(img)
     y = cal_BB(x)
@@ -78,8 +81,10 @@ if __name__ == '__main__':
     print(y)
 
     img_bb_qb = img.copy()
-    cv2.rectangle(img_bb_qb, y[0], y[1], (255, 255, 0), 3)  # bounding box
-    cv2.polylines(img_bb_qb, [np.int32(x)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+    for i, b in enumerate(y):
+        cv2.rectangle(img_bb_qb, (b.x, b.y, b.w, b.h), (255, 255, 0), 3)  # bounding box
+        cv2.polylines(img_bb_qb, [np.int32(x[i])], True, color=(255, 0, 255), thickness=2,
+                      lineType=cv2.LINE_AA)  # quadrilateral box
     cv2.namedWindow('img_bb_qb', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img_bb_qb', tuple(map(lambda x: int(x * 0.9), (1920, 1080))))
     cv2.imshow('img_bb_qb', img_bb_qb)
