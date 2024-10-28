@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-from bidict import bidict
 from PIL import ImageFont, ImageDraw, Image
+from bidict import bidict
 
 # 영한변환표 v1.0
 bd_eng2kor_v1p0 = bidict(dict(
