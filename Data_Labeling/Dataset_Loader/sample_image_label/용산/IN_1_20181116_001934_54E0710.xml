@@ -1,0 +1,26 @@
+<annotation verified="no">
+  <folder>&#50724;&#54644;&#49457;(Full&#44160;&#53664;&#50756;&#47308; 3352&#44060;)</folder>
+  <filename>IN_1_20181116_001934_54E0710</filename>
+  <path>D:\&#50724;&#54644;&#49457;(Full&#44160;&#53664;&#50756;&#47308; 3352&#44060;)\IN_1_20181116_001934_54E0710.jpg</path>
+  <source>
+    <database>Unknown</database>
+  </source>
+  <size>
+    <width>1600</width>
+    <height>1200</height>
+    <depth>1</depth>
+  </size>
+  <segmented>0</segmented>
+  <object>
+    <name>P1_1.0</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+      <xmin>653</xmin>
+      <ymin>307</ymin>
+      <xmax>979</xmax>
+      <ymax>446</ymax>
+    </bndbox>
+  </object>
+</annotation>
