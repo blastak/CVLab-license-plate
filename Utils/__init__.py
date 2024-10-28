@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from bidict import bidict
+from PIL import ImageFont, ImageDraw, Image
 
 # 영한변환표 v1.0
 bd_eng2kor_v1p0 = bidict(dict(
@@ -24,6 +25,16 @@ bd_eng2kor_v1p3 = bidict(
      'CH': '표'})
 
 
+def trans_eng2kor_v1p3(list_of_txt: list):
+    retval = []
+    for chs in list_of_txt:
+        if not chs.isdigit():
+            for f, t in bd_eng2kor_v1p3.items():
+                chs = chs.replace(f, t)
+        retval.append(chs)
+    return retval
+
+
 def imread_uni(filename, flags=cv2.IMREAD_COLOR):
     """
     경로에 유니코드가 섞여있으면 이 함수를 사용하라.\n
@@ -34,3 +45,52 @@ def imread_uni(filename, flags=cv2.IMREAD_COLOR):
     """
     img_temp = np.fromfile(filename, np.uint8)
     return cv2.imdecode(img_temp, flags)
+
+
+# GPT가 만듦
+def add_text_with_background(image, text, font_path="malgunbd.ttf", font_size=20,
+                             font_color=(0, 255, 0), bg_color=(0, 0, 0),
+                             position=(50, 50), padding=5):
+    """
+    OpenCV 이미지에 한글 텍스트와 배경을 추가한 후 다시 OpenCV 이미지로 반환하는 함수
+
+    :param image: OpenCV 컬러 이미지 (numpy 배열)
+    :param text: 추가할 텍스트 (한글 가능)
+    :param font_path: 사용할 폰트 경로 (기본값: "NanumGothic.ttf")
+    :param font_size: 텍스트 크기 (기본값: 20)
+    :param font_color: 텍스트 색상 (기본값: 초록색 (0, 255, 0))
+    :param bg_color: 텍스트 배경 색상 (기본값: 검은색 (0, 0, 0))
+    :param position: 텍스트가 추가될 위치 (기본값: (50, 50))
+    :param padding: 텍스트 배경에 추가할 패딩 (기본값: 5)
+    :return: 텍스트와 배경이 추가된 OpenCV 컬러 이미지
+    """
+
+    # OpenCV 이미지를 PIL 이미지로 변환
+    img_pil = Image.fromarray(image)
+    draw = ImageDraw.Draw(img_pil)
+
+    # 폰트 설정
+    unicode_font = ImageFont.truetype(font=font_path, size=font_size)
+
+    # 텍스트의 크기를 계산 (텍스트 경계를 반환)
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=unicode_font)
+    text_width = right - left
+    text_height = bottom - top
+
+    # 텍스트 배경 사각형 좌표 계산
+    x, y = position
+    background_left = x - padding
+    background_top = y - padding + font_size // 4  # magic number
+    background_right = x + text_width + padding
+    background_bottom = y + text_height + padding + font_size // 4  # magic number
+
+    # 배경 그리기 (사각형)
+    draw.rectangle([background_left, background_top, background_right, background_bottom], fill=bg_color)
+
+    # 텍스트 그리기
+    draw.text((x, y), text, fill=font_color, font=unicode_font)
+
+    # 다시 OpenCV 이미지로 변환
+    result_image = np.uint8(img_pil)
+
+    return result_image
