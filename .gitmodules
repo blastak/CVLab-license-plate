@@ -1,0 +1,3 @@
+[submodule "LP_Detection/IWPOD_torch"]
+	path = LP_Detection/IWPOD_torch
+	url = https://github.com/blastak/iwpod-net-pytorch.git
