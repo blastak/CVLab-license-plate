@@ -35,6 +35,43 @@ def trans_eng2kor_v1p3(list_of_txt: list):
     return retval
 
 
+### 변환표
+bd_chn2num = bidict({'京': '00',  # Beijing
+                     '津': '01',  # Tianjin
+                     '冀': '02',  # Hebei
+                     '晋': '03',  # Shanxi
+                     '蒙': '04',  # Inner Mongolia
+                     '辽': '05',  # Liaoning
+                     '吉': '06',  # Jilin
+                     '黑': '07',  # Heilongjiang
+                     '沪': '08',  # Shanghai
+                     '苏': '09',  # Jiangsu
+                     '浙': '10',  # Zhejiang
+                     '皖': '11',  # Anhui
+                     '闽': '12',  # Fujian
+                     '赣': '13',  # Jiangxi
+                     '鲁': '14',  # Shandong
+                     '豫': '15',  # Henan
+                     '鄂': '16',  # Hubei
+                     '湘': '17',  # Hunan
+                     '粤': '18',  # Guangdong
+                     '桂': '19',  # Guangxi
+                     '琼': '20',  # Hainan
+                     '渝': '21',  # Chongqing
+                     '川': '22',  # Sichuan
+                     '贵': '23',  # Guizhou
+                     '云': '24',  # Yunnan
+                     '藏': '25',  # Xizang Tibetan Autonomous Region
+                     '陕': '26',  # Shaanxi
+                     '甘': '27',  # Gansu
+                     '青': '28',  # Qinghai
+                     '宁': '29',  # Ningxia
+                     '新': '30',  # Xinjiang
+                     '港': '31',  # Hong Kong (suffix)
+                     '澳': '32',  # Macau (suffix)
+                     })
+
+
 def imread_uni(filename, flags=cv2.IMREAD_COLOR):
     """
     경로에 유니코드가 섞여있으면 이 함수를 사용하라.\n
