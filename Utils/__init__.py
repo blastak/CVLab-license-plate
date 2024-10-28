@@ -25,6 +25,16 @@ bd_eng2kor_v1p3 = bidict(
      'CH': '표'})
 
 
+def trans_eng2kor_v1p3(list_of_txt: list):
+    retval = []
+    for chs in list_of_txt:
+        if not chs.isdigit():
+            for f, t in bd_eng2kor_v1p3.items():
+                chs = chs.replace(f, t)
+        retval.append(chs)
+    return retval
+
+
 def imread_uni(filename, flags=cv2.IMREAD_COLOR):
     """
     경로에 유니코드가 섞여있으면 이 함수를 사용하라.\n
