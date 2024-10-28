@@ -74,25 +74,24 @@ while True:
         sleep(1.5)
 
         # 사진 저장
-        pyautogui.moveTo(1920, 1080)  # x 100, y 200 위치로 바로 이동
+        screen_width, screen_height = pyautogui.size()
+        pyautogui.moveTo(screen_width // 2, screen_height // 2)  # 화면 중앙 위치로 이동
         sleep(0.5)
         pyautogui.click(button='right')
         sleep(0.5)
         pyautogui.write('v')
         sleep(0.5)
-        pyautogui.press('left', presses=1)
-        sleep(0.2)
-        pyautogui.hotkey('ctrl', 'v')
+        pyautogui.press('right', presses=1)
         sleep(0.2)
         pyautogui.write('_')
+        sleep(0.2)
+        pyautogui.hotkey('ctrl', 'v')
         sleep(0.2)
         pyautogui.press('enter')
         sleep(0.2)
 
         # 중복시 덮어쓰기
-        pyautogui.moveTo(1982, 1065)  # x 100, y 200 위치로 바로 이동
-        sleep(0.2)
-        pyautogui.click()
+        pyautogui.write('y')
         sleep(0.2)
         pyautogui.hotkey('ctrl', 'w')
         sleep(0.3)
