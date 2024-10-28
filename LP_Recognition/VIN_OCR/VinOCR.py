@@ -1,11 +1,13 @@
+import os
+
 import cv2
 import numpy as np
 
+from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from LP_Detection import OcvYoloBase, BBox
 from LP_Detection.VIN_LPD import get_bb_VinLPD
 from Utils import imread_uni, bd_eng2kor_v1p3, add_text_with_background, trans_eng2kor_v1p3
-from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
-import os
+
 inpWidth = 256
 inpHeight = 224
 
@@ -118,7 +120,6 @@ class VinOCR(OcvYoloBase):
                 retval.append(b.class_str)
 
         return retval
-
 
 
 if __name__ == '__main__':
