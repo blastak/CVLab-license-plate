@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import csv
 
 from src.keras_utils import detect_lp_width
 from src.keras_utils import load_model
@@ -27,12 +28,12 @@ def find_lp_corner(img_orig):
         xys2 = np.transpose(pts.astype(np.int32))
         xys2_list.append(xys2.tolist())
     if xys2_list:
-        return xys2_list[0]
+        return xys2_list
     else:
-        return [0]
+        return 0
 
 
-def cal_center(pre_cen):
+def cal_BB(pre_cen):
     x_coords = [point[0] for point in pre_cen]
     y_coords = [point[1] for point in pre_cen]
     min_x = min(x_coords)
@@ -41,12 +42,36 @@ def cal_center(pre_cen):
     max_y = max(y_coords)
     return [[min_x, min_y], [max_x, max_y]]
 
+def save_csv(data,path):
+	print(path)
+	with open(path, 'w', newline='') as file:
+		writer = csv.writer(file)
+		# 각 4각형마다 한 줄에 8개 값(x1,y1,x2,y2,x3,y3,x4,y4) 저장
+		for quad in data:
+			quad_array = np.array(quad)
+			# 2차원 배열을 1차원으로 평탄화
+			flat_coords = quad_array.reshape(-1)
+			writer.writerow(flat_coords)
+
+def load_csv(path):
+	coordinates_list = []
+	with open(path, 'r') as file:
+		reader = csv.reader(file)
+		for row in reader:
+			# 문자열을 float으로 변환
+			coords = np.array([float(x) for x in row])
+			# 1차원 배열을 4x2 형태로 재구성
+			quad_coords = coords.reshape(4, 2)
+			coordinates_list.append(quad_coords)
+
+	return coordinates_list, len(coordinates_list)
+
 
 if __name__ == '__main__':
     img_path = "../sample_image/seoulmp4_001036359jpg.jpg"
     img = imread_uni(img_path)
     x = find_lp_corner(img)
-    y = cal_center(x)
+    y = cal_BB(x)
     print(x)
     print(y)
 
@@ -61,6 +86,6 @@ if __name__ == '__main__':
     # negative test
     neg_img = np.zeros_like(img)
     x = find_lp_corner(neg_img)
-    y = cal_center(x)
+    y = cal_BB(x)
     print(x)
     print(y)
