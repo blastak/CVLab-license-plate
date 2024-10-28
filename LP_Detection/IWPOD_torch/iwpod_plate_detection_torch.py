@@ -1,16 +1,20 @@
-import csv
-import os
-import sys
-
 import cv2
 import numpy as np
+import torch
 
-from LP_Detection import BBox
+from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import cal_BB
 from Utils import imread_uni
+from src.detect import detect_lp_width
+from src.src.model import IWPODNet
+from src.src.utils import im2single
 
-sys.path.append(os.path.dirname(__file__))
-from src.keras_utils import detect_lp_width, load_model
-from src.utils import im2single
+
+def torch_load_model(path):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    mymodel = IWPODNet()
+    mymodel.load_state_dict(torch.load(path)['model_state_dict'])
+    mymodel.to(device)
+    return mymodel
 
 
 def find_lp_corner(img_orig, iwpod_net):
@@ -34,48 +38,10 @@ def find_lp_corner(img_orig, iwpod_net):
     return xys2_list
 
 
-def cal_BB(pre_cen):
-    BB_list = []
-    for i in range(len(pre_cen)):
-        x_coords = [point[0] for point in pre_cen[i]]
-        y_coords = [point[1] for point in pre_cen[i]]
-        min_x = min(x_coords)
-        max_x = max(x_coords)
-        min_y = min(y_coords)
-        max_y = max(y_coords)
-        BB_list.append(BBox(min_x, min_y, max_x - min_x, max_y - min_y))
-    return BB_list
-
-
-def save_csv(data, path):
-    print(path)
-    with open(path, 'w', newline='') as file:
-        writer = csv.writer(file)
-        # 각 4각형마다 한 줄에 8개 값(x1,y1,x2,y2,x3,y3,x4,y4) 저장
-        for quad in data:
-            quad_array = np.array(quad)
-            # 2차원 배열을 1차원으로 평탄화
-            flat_coords = quad_array.reshape(-1)
-            writer.writerow(flat_coords)
-
-
-def load_csv(path):
-    coordinates_list = []
-    with open(path, 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            # 문자열을 float으로 변환
-            coords = np.array([float(x) for x in row])
-            # 1차원 배열을 4x2 형태로 재구성
-            quad_coords = coords.reshape(4, 2)
-            coordinates_list.append(quad_coords)
-
-    return coordinates_list, len(coordinates_list)
-
-
 if __name__ == '__main__':
-    mymodel = load_model('./weights/iwpod_net')
+    mymodel = torch_load_model('./src/weights/iwpodnet_retrained_epoch10000.pth')
 
+    # img_path = "../sample_image/seoulmp4_001036359jpg.jpg"
     img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
     img = imread_uni(img_path)
     x = find_lp_corner(img, mymodel)
@@ -87,6 +53,8 @@ if __name__ == '__main__':
     for i, b in enumerate(y):
         cv2.rectangle(img_bb_qb, (b.x, b.y, b.w, b.h), (255, 255, 0), 3)  # bounding box
         cv2.polylines(img_bb_qb, [np.int32(x[i])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+    # cv2.namedWindow('img_bb_qb', cv2.WINDOW_NORMAL)
+    # cv2.resizeWindow('img_bb_qb', tuple(map(lambda x: int(x * 0.9), (1920, 1080))))
     cv2.imshow('img_bb_qb', img_bb_qb)
     cv2.waitKey()
 
