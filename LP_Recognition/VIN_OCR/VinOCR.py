@@ -5,7 +5,7 @@ import numpy as np
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from LP_Detection import OcvYoloBase, BBox
-from LP_Detection.VIN_LPD import get_bb_VinLPD
+from LP_Detection.VIN_LPD import load_model_VinLPD
 from Utils import imread_uni, bd_eng2kor_v1p3, add_text_with_background, trans_eng2kor_v1p3
 
 inpWidth = 256
@@ -16,20 +16,33 @@ class VinOCR(OcvYoloBase):
     def __init__(self, _model_path, _weight_path, _classes_path):
         super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.03, _iou_thresh=0.3, _in_w=inpWidth, _in_h=inpHeight)
 
-    def crop_pad_resize(self, img, b):
-        img2 = img[b.y:b.y + b.h, b.x:b.x + b.w, :]  # crop
-        if (inpWidth / img2.shape[1]) < (inpHeight / img2.shape[0]):
-            new_w = inpWidth
-            new_h = int((img2.shape[0] * inpWidth) / img2.shape[1])
+    def crop_resize_with_padding(self, img, b, target_width=inpWidth, target_height=inpHeight):
+        # Step 1: Bounding box 영역을 잘라냄
+        cropped_img = img[b.y:b.y + b.h, b.x:b.x + b.w, :]
+
+        # Step 2: aspect ratio를 유지하면서 target 크기에 맞춰 resize
+        aspect_ratio_target = target_width / target_height
+        aspect_ratio_cropped = cropped_img.shape[1] / cropped_img.shape[0]
+
+        if aspect_ratio_cropped > aspect_ratio_target:
+            # 폭 기준으로 조정
+            new_width = target_width
+            new_height = int(cropped_img.shape[0] * target_width / cropped_img.shape[1])
         else:
-            new_h = inpHeight
-            new_w = int((img2.shape[1] * inpHeight) / img2.shape[0])
-        resized = cv2.resize(img2, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        new_img = np.zeros((inpHeight, inpWidth, 3), np.uint8) + 128
-        new_x = int(inpWidth / 2 - new_w / 2)
-        new_y = int(inpHeight / 2 - new_h / 2)
-        new_img[new_y:new_y + new_h, new_x:new_x + new_w, :] = resized.copy()
-        return new_img
+            # 높이 기준으로 조정
+            new_height = target_height
+            new_width = int(cropped_img.shape[1] * target_height / cropped_img.shape[0])
+
+        resized_img = cv2.resize(cropped_img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+        # Step 3: 패딩 추가
+        padded_img = np.zeros((target_height, target_width, 3), dtype=np.uint8)
+        offset_x = (target_width - new_width) // 2
+        offset_y = (target_height - new_height) // 2
+
+        padded_img[offset_y:offset_y + new_height, offset_x:offset_x + new_width] = resized_img
+
+        return padded_img
 
     def check_align(self, _boxes, _p_type):
         self.check_border(_boxes)  # 오검출 제거
@@ -129,20 +142,22 @@ if __name__ == '__main__':
 
     if use_detector:
         img = imread_uni('../../LP_Detection/sample_image/seoulmp4_001036359jpg.jpg')
-        d_out = get_bb_VinLPD('../../LP_Detection/VIN_LPD/weight/', img)  # from Detector
+        d_net = load_model_VinLPD('../../LP_Detection/VIN_LPD/weight/')
+        d_out = d_net.resize_N_forward(img)  # from Detector
     else:
         prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/파클'
         # prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/용산'
         # prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/충남'
         loader = DatasetLoader_ParkingView(prefix)
         jpg_paths = [a for a in os.listdir(prefix) if a.endswith('.jpg')]
-        img = imread_uni(os.path.join(prefix, jpg_paths[0]))
-        plate_type, label, left, top, right, bottom = loader.parse_info(jpg_paths[0][:-4] + '.xml')  # from XML
-        d_out = [BBox(left, top, right - left, bottom - top, label, int(plate_type[1:]), 1.0)]
+        jpg_path = jpg_paths[0]  # 테스트를 위해 하나만 선택
+        img = imread_uni(os.path.join(prefix, jpg_path))
+        plate_type, plate_number, left, top, right, bottom = loader.parse_info(jpg_path[:-4] + '.xml')  # from XML
+        d_out = [BBox(left, top, right - left, bottom - top, plate_number, int(plate_type[1:]), 1.0)]
 
     for i, bb in enumerate(d_out):
-        crop_resized_img = r_net.crop_pad_resize(img, bb)
-        r_out = r_net.forward(crop_resized_img)
+        crop_resized_img = r_net.crop_resize_with_padding(img, bb)
+        r_out = r_net.resize_N_forward(crop_resized_img)
         for b in r_out:
             cv2.rectangle(crop_resized_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
             font_size = b.w  # magic number

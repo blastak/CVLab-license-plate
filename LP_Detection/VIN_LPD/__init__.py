@@ -10,19 +10,17 @@ class VinLPD(OcvYoloBase):
         super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.24, _iou_thresh=0.5)
 
 
-# for calling by VinOCR
-def get_bb_VinLPD(path_base, img):
+def load_model_VinLPD(path_base):
     if path_base[-1] != '/':
         path_base += '/'
     d_net = VinLPD(path_base + 'yolov3-feather.cfg', path_base + 'yolov3-feather.weights', path_base + 'yolov3-feather.names')
-    d_out = d_net.forward(img)
-    return d_out
+    return d_net
 
 
 if __name__ == '__main__':
-    d_net = VinLPD('./weight/yolov3-feather.cfg', './weight/yolov3-feather.weights', './weight/yolov3-feather.names')
+    d_net = load_model_VinLPD('./weight')
     img = imread_uni('../sample_image/seoulmp4_001036359jpg.jpg')
-    d_out = d_net.forward(img)
+    d_out = d_net.resize_N_forward(img)
     print(len(d_out))
 
     img_bb = img.copy()
