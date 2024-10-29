@@ -36,7 +36,7 @@ LP_plate_wh = {
 
 class Graphical_Model_Generator_KOR:
     def __init__(self, base_path, LP_cls):
-        self.base_path = base_path + LP_cls + '/'
+        self.base_path = os.path.join(base_path, LP_cls)
         self.plate_wh = LP_plate_wh.get(LP_cls)
         self.char_xywh = LP_char_xywh.get(LP_cls)
         self.LP_cls = LP_cls
@@ -131,9 +131,44 @@ class Graphical_Model_Generator_KOR:
 
 
 if __name__ == '__main__':
+    LP_cls = 'P1-1'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('12가3456')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
     LP_cls = 'P1-2'
     generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
-    # img = generator.make_LP('서울23바4568')
-    img = generator.make_LP('04고6545')
+    img = generator.make_LP('78거9012')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P1-3'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('356수4846')  # hrkim's
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P1-4'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('259노7549')  # 아반떼
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P2'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('98구7654')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P3'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('인천74바8282')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P4'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('대전31아4335')
     cv2.imshow('img', img)
     cv2.waitKey()
