@@ -9,7 +9,7 @@ from LP_Detection import BBox
 from Utils import imread_uni
 
 sys.path.append(os.path.dirname(__file__))
-from src.keras_utils import detect_lp_width, load_model
+from src.keras_utils import detect_lp_width, load_model_tf
 from src.utils import im2single
 
 
@@ -29,7 +29,7 @@ def find_lp_corner(img_orig, iwpod_net):
     xys2_list = []
     for j, img in enumerate(LlpImgs):
         pts = Llp[j].pts * iwh
-        xys2 = np.transpose(pts.astype(np.int32))
+        xys2 = np.transpose(pts)
         xys2_list.append(xys2.tolist())
     return xys2_list
 
@@ -74,25 +74,26 @@ def load_csv(path):
 
 
 if __name__ == '__main__':
-    mymodel = load_model('./weights/iwpod_net')
+    iwpod_tf = load_model_tf('./weights/iwpod_net')
 
-    img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
+    # img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
+    img_path = "../sample_image/example_aolp_fullimage.jpg"
     img = imread_uni(img_path)
-    x = find_lp_corner(img, mymodel)
+    x = find_lp_corner(img, iwpod_tf)
     y = cal_BB(x)
     print(x)
     print(y)
 
     img_bb_qb = img.copy()
     for i, b in enumerate(y):
+        b.round_()
         cv2.rectangle(img_bb_qb, (b.x, b.y, b.w, b.h), (255, 255, 0), 3)  # bounding box
         cv2.polylines(img_bb_qb, [np.int32(x[i])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
     cv2.imshow('img_bb_qb', img_bb_qb)
     cv2.waitKey()
 
     # negative test
-    neg_img = np.zeros_like(img)
-    x = find_lp_corner(neg_img, mymodel)
+    x = find_lp_corner(np.zeros_like(img), iwpod_tf)
     y = cal_BB(x)
     print(x)
     print(y)

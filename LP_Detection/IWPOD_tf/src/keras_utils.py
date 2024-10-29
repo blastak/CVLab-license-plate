@@ -17,7 +17,7 @@ class DLabel(Label):
         Label.__init__(self, cl, tl, br, prob)
 
 
-def load_model(path, custom_objects={}, verbose=0):
+def load_model_tf(path, custom_objects={}, verbose=0):
     from tensorflow.keras.models import model_from_json
 
     path = splitext(path)[0]

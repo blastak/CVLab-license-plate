@@ -14,6 +14,23 @@ class BBox:
     class_idx: int = None
     conf: float = None
 
+    def round_(self):
+        self.x = round(self.x)
+        self.y = round(self.y)
+        self.w = round(self.w)
+        self.h = round(self.h)
+
+
+@dataclass
+class Quadrilateral:
+    xy1: tuple = None
+    xy2: tuple = None
+    xy3: tuple = None
+    xy4: tuple = None
+    class_str: str = None
+    class_idx: int = None
+    conf: float = None
+
 
 class OcvYoloBase:
     def __init__(self, _model_path, _weight_path, _classes_path, _in_w=416, _in_h=416, _conf_thresh=0.5, _iou_thresh=0.5):
