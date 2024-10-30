@@ -1,3 +1,6 @@
+import json
+import os
+
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
@@ -131,3 +134,38 @@ def add_text_with_background(image, text, font_path="malgunbd.ttf", font_size=20
     result_image = np.uint8(img_pil)
 
     return result_image
+
+
+def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
+    data = dict(
+        version="5.5.0",  # 버전 통일
+        flags={},
+        shapes=[shapes],
+        imagePath=imagePath,
+        imageData=None,
+        imageHeight=imageHeight,
+        imageWidth=imageWidth,
+    )
+    '''
+    {
+      "version": "5.5.0",
+      "flags": {},
+      "shapes": [
+        {},
+        {},
+        {},
+        {}
+      ],
+      "imagePath": "in_L01_0_20161125_182519_182715_438_서울71바8669.jpg",
+      "imageData": null,
+      "imageHeight": 1200,
+      "imageWidth": 1600
+    }
+    '''
+    save_path = os.path.join(json_path, imagePath)[:-4]
+    try:
+        with open(save_path + '.json', "w", encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(e)
+        print(json_path)
