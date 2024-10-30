@@ -107,8 +107,6 @@ class Graphical_Model_Generator_KOR:
                 img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p), cv2.IMREAD_UNCHANGED),
                                  self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
-                cv2.imshow('img', img_template)
-                cv2.waitKey(3)
         else:
             for i, ch in enumerate(demand_str):
                 p = ''
