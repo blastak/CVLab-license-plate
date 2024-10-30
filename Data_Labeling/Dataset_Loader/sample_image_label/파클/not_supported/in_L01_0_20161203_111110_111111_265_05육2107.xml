@@ -1,0 +1,26 @@
+<annotation verified="no">
+  <folder>woojin</folder>
+  <filename>in_L01_0_20161203_111110_111111_265_05&#50977;2107</filename>
+  <path>C:\Users\woojin\Desktop\&#45936;&#51060;&#53552;\woojin\in_L01_0_20161203_111110_111111_265_05&#50977;2107.jpg</path>
+  <source>
+    <database>Unknown</database>
+  </source>
+  <size>
+    <width>1600</width>
+    <height>1200</height>
+    <depth>1</depth>
+  </size>
+  <segmented>0</segmented>
+  <object>
+    <name>P1_05&#50977;2107</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+      <xmin>676</xmin>
+      <ymin>338</ymin>
+      <xmax>926</xmax>
+      <ymax>404</ymax>
+    </bndbox>
+  </object>
+</annotation>

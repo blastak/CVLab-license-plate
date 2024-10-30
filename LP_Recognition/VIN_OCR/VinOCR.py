@@ -153,7 +153,7 @@ if __name__ == '__main__':
         jpg_path = jpg_paths[0]  # 테스트를 위해 하나만 선택
         img = imread_uni(os.path.join(prefix, jpg_path))
         plate_type, plate_number, left, top, right, bottom = loader.parse_info(jpg_path[:-4] + '.xml')  # from XML
-        d_out = [BBox(left, top, right - left, bottom - top, plate_number, int(plate_type[1:]), 1.0)]
+        d_out = [BBox(left, top, right - left, bottom - top, plate_number, int(plate_type[1:2]), 1.0)]
 
     for i, bb in enumerate(d_out):
         crop_resized_img = r_net.crop_resize_with_padding(img, bb)

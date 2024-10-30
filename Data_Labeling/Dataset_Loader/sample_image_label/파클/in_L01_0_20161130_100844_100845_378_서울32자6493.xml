@@ -1,7 +1,7 @@
 <annotation verified="no">
-  <folder>20171107_&#44053;&#51473;&#49437;&#50472;</folder>
-  <filename>in_L01_0_20161125_182519_182715_438_&#49436;&#50872;71&#48148;8669</filename>
-  <path>C:\20171107_&#44053;&#51473;&#49437;&#50472;\in_L01_0_20161125_182519_182715_438_&#49436;&#50872;71&#48148;8669.jpg</path>
+  <folder>20171107_&#49888;&#54788;&#51456;&#50472;</folder>
+  <filename>in_L01_0_20161130_100844_100845_378_&#49436;&#50872;32&#51088;6493</filename>
+  <path>C:\20171107_&#49888;&#54788;&#51456;&#50472;\in_L01_0_20161130_100844_100845_378_&#49436;&#50872;32&#51088;6493.jpg</path>
   <source>
     <database>Unknown</database>
   </source>
@@ -12,15 +12,15 @@
   </size>
   <segmented>0</segmented>
   <object>
-    <name>P3_&#49436;&#50872;71&#48148;8669</name>
+    <name>P4_&#49436;&#50872;32&#51088;6493</name>
     <pose>Unspecified</pose>
     <truncated>0</truncated>
     <difficult>0</difficult>
     <bndbox>
-      <xmin>408</xmin>
-      <ymin>424</ymin>
-      <xmax>707</xmax>
-      <ymax>593</ymax>
+      <xmin>956</xmin>
+      <ymin>240</ymin>
+      <xmax>1264</xmax>
+      <ymax>332</ymax>
     </bndbox>
   </object>
   <object>
@@ -29,22 +29,22 @@
     <truncated>0</truncated>
     <difficult>0</difficult>
     <bndbox>
-      <xmin>473</xmin>
-      <ymin>438</ymin>
-      <xmax>545</xmax>
-      <ymax>489</ymax>
+      <xmin>968</xmin>
+      <ymin>251</ymin>
+      <xmax>1010</xmax>
+      <ymax>317</ymax>
     </bndbox>
   </object>
   <object>
-    <name>&#48148;</name>
+    <name>&#51088;</name>
     <pose>Unspecified</pose>
     <truncated>0</truncated>
     <difficult>0</difficult>
     <bndbox>
-      <xmin>426</xmin>
-      <ymin>494</ymin>
-      <xmax>484</xmax>
-      <ymax>568</ymax>
+      <xmin>1068</xmin>
+      <ymin>254</ymin>
+      <xmax>1101</xmax>
+      <ymax>316</ymax>
     </bndbox>
   </object>
 </annotation>
