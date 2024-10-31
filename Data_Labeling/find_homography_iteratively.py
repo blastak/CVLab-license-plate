@@ -32,7 +32,7 @@ def extract_N_track_features(img_gened, mask_text_area, img_front):
     return pt1, pt2
 
 
-def calculate_text_area_coordinates(generator, shape):
+def calculate_text_area_coordinates(generator, shape, plate_type):
     cr_x = int(generator.char_xywh[0][0] * 1) - 10
     cr_y = int(generator.char_xywh[0][1] * 1) - 10
     cr_w = (generator.char_xywh[1][0] * 6 + generator.char_xywh[5][0]) * 1 + 20
@@ -137,7 +137,7 @@ if __name__ == '__main__':
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_number)
             g_h, g_w = img_gened.shape[:2]
-            mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w))
+            mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
             pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
             mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
