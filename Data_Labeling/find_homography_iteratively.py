@@ -163,9 +163,10 @@ if __name__ == '__main__':
 
         k = 0
         key_in = 0
+        name = ['XML Label','VIN_LPD','IWPOD_TF']
         while True:
             for i, res in enumerate(img_results):
-                cv2.imshow(f'{i + 1}', res[k])
+                cv2.imshow(name[i], res[k])
             key_in = cv2.waitKey()
             if key_in == ord('1'):
                 k = 0

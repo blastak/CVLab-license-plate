@@ -71,6 +71,13 @@ class Graphical_Model_Generator_CHN:
 
 if __name__ == '__main__':
     generator = Graphical_Model_Generator_CHN('./BetaType/chinese_LP/')
-    img = generator.make_LP('京A1B3C5')
+    # img = generator.make_LP('京BYX342')
+    # img = generator.make_LP('津A63060')
+    # img = generator.make_LP('冀E99999')
+    # img = generator.make_LP('晋H88888')
+    # img = generator.make_LP('蒙T41718')
+    # img = generator.make_LP('辽JL0239')
+    # img = generator.make_LP('吉C68686')
+    img = generator.make_LP('黑FTS521')
     cv2.imshow('img', img)
     cv2.waitKey()
