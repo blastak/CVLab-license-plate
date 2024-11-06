@@ -21,15 +21,18 @@ from selenium.webdriver.common.by import By
 # 기간 + 첫차 중고차 세차 새차 차 자가용
 # []['1991','1992','1993'] ['년식', '생산', ''] ['중고차','판매완료'] ['녹색번호판']
 
-option = 1
+option = 3
 if option == 1:
     years = [f'{i % 100}년식' for i in range(1991, 2007)]
     keywords = list(product(years, ['', ' 중고차', ' 판매완료']))
+    item_list = [''.join(k) for k in keywords]  # 1번
 elif option == 2:
     years = [str(i) for i in range(1991, 2007)]
     keywords = list(product(years,['', '년식'],[' 중고차']))
-
-item_list = [''.join(k) for k in keywords]  # 1번
+    item_list = [''.join(k) for k in keywords]  # 1번
+else:
+    # item_list = ['애마', '세차', '새차', '차', '자가용', '첫차', '중고차']
+    item_list = ['번호판', '녹색번호판', '구형번호판', '지역번호판', '신기한 번호판', '특이한 번호판', '시승'] # '서울번호판', '경기번호판','부산번호판', '광주번호판','울산번호판','대전번호판',
 FOLDER = 'naver'  # 2번
 IMG_XPATH = '/html/body/div[4]/div/div/div[1]/div[2]/div[1]/img'
 
@@ -39,16 +42,30 @@ def main():
     driver = webdriver.Chrome()
 
     for searchItem in item_list:
-        saveDir = makeFolder(searchItem)
+        if option <= 2:
+            saveDir = makeFolder(searchItem)
 
-        url = makeUrl(searchItem)  # 검색할 url 가져와서
-        driver.get(url)  # 이미지 검색으로 가서
-        maximizeWindow(driver)  # 창최대화
-        scrollToEnd(driver)
+            url = makeUrl(searchItem)  # 검색할 url 가져와서
+            driver.get(url)  # 이미지 검색으로 가서
+            maximizeWindow(driver)  # 창최대화
+            scrollToEnd(driver)
 
-        forbiddenCount = saveImgs(driver, saveDir, start)  # 모든 상세 이미지 src들을 가져온다
-        sec = check_time(start)
-        print(f'실패수{str(forbiddenCount)}, {sec}, {datetime.datetime.now().time()}')
+            forbiddenCount = saveImgs(driver, saveDir, start)  # 모든 상세 이미지 src들을 가져온다
+            sec = check_time(start)
+            print(f'실패수{str(forbiddenCount)}, {sec}, {datetime.datetime.now().time()}')
+        else:
+            for y in range(2002, 2012):
+                saveDir = makeFolder(searchItem + '_(%d~%d)' % (y, y + 1))
+
+                url = makeUrl(searchItem)  # 검색할 url 가져와서
+                url += f'&nso=so%3Ar%2Cp%3Afrom{y}0101to{y+1}0101'
+                driver.get(url)  # 이미지 검색으로 가서
+                maximizeWindow(driver)  # 창최대화
+                scrollToEnd(driver)
+
+                forbiddenCount = saveImgs(driver, saveDir, start)  # 모든 상세 이미지 src들을 가져온다
+                sec = check_time(start)
+                print(f'실패수{str(forbiddenCount)}, {sec}, {datetime.datetime.now().time()}')
     time.sleep(10)
     driver.quit()
 

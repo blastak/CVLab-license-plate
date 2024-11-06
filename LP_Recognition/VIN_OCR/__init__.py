@@ -17,6 +17,13 @@ class VinOCR(OcvYoloBase):
         super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.03, _iou_thresh=0.3, _in_w=inpWidth, _in_h=inpHeight)
 
     def crop_resize_with_padding(self, img, b, target_width=inpWidth, target_height=inpHeight):
+        if b.x < 0:
+            b.w += b.x
+            b.x = 0
+        if b.y < 0:
+            b.h += b.y
+            b.y = 0
+
         # Step 1: Bounding box 영역을 잘라냄
         cropped_img = img[b.y:b.y + b.h, b.x:b.x + b.w, :]
 
@@ -135,8 +142,15 @@ class VinOCR(OcvYoloBase):
         return retval
 
 
+def load_model_VinOCR(path_base):
+    if path_base[-1] != '/':
+        path_base += '/'
+    d_net = VinOCR(path_base + 'yolov3-rn83.cfg', path_base + 'yolov3-rn83.weights', path_base + 'yolov3-rn83.names')
+    return d_net
+
+
 if __name__ == '__main__':
-    r_net = VinOCR('./weight/yolov3-rn83.cfg', './weight/yolov3-rn83.weights', './weight/yolov3-rn83.names')
+    r_net = load_model_VinOCR('./weight')
 
     use_detector = True
 
