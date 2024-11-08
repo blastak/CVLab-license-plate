@@ -11,6 +11,8 @@ from itertools import product
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # 검색어 합성
 # ['91년식 중고차', ... , '05년식 중고차']
@@ -32,7 +34,27 @@ elif option == 2:
     item_list = [''.join(k) for k in keywords]  # 1번
 else:
     # item_list = ['애마', '세차', '새차', '차', '자가용', '첫차', '중고차']
-    item_list = ['번호판', '녹색번호판', '구형번호판', '지역번호판', '신기한 번호판', '특이한 번호판', '시승'] # '서울번호판', '경기번호판','부산번호판', '광주번호판','울산번호판','대전번호판',
+    # item_list = ['번호판', '녹색번호판', '구형번호판', '지역번호판', '신기한 번호판', '특이한 번호판', '시승'] # '서울번호판', '경기번호판','부산번호판', '광주번호판','울산번호판','대전번호판',
+    range_tuple = (2022,2023)
+    item_list = [
+                 # '서울개인택시',
+                 '인천개인택시',
+                 '대전개인택시',
+                 '광주개인택시',
+                 '대구개인택시',
+                 '세종개인택시',
+                 '울산개인택시',
+                 '부산개인택시',
+                 '제주개인택시',
+                 '경기개인택시',
+                 '강원개인택시',
+                 '충북개인택시',
+                 '충남개인택시',
+                 '전북개인택시',
+                 '전남개인택시',
+                 '경북개인택시',
+                 '경남개인택시',
+                 ] # '택시','개인택시','영업용번호판',
 FOLDER = 'naver'  # 2번
 IMG_XPATH = '/html/body/div[4]/div/div/div[1]/div[2]/div[1]/img'
 
@@ -54,8 +76,8 @@ def main():
             sec = check_time(start)
             print(f'실패수{str(forbiddenCount)}, {sec}, {datetime.datetime.now().time()}')
         else:
-            for y in range(2002, 2012):
-                saveDir = makeFolder(searchItem + '_(%d~%d)' % (y, y + 1))
+            for y in range(*range_tuple):
+                saveDir = makeFolder(searchItem + '(%d~%d)' % (y, y + 1))
 
                 url = makeUrl(searchItem)  # 검색할 url 가져와서
                 url += f'&nso=so%3Ar%2Cp%3Afrom{y}0101to{y+1}0101'
@@ -125,8 +147,8 @@ def saveImgs(driver, saveDir, start):
     forbiddenCount = 0
     imgs = driver.find_elements(By.CSS_SELECTOR, '._fe_image_tab_content_thumbnail_image')
 
-    print('imgs')
-    print(imgs)
+    # print('imgs')
+    # print(imgs)
     srcList = []
     img_count = len(imgs)
     print(f'전체 이미지수 : {img_count}')
@@ -134,10 +156,11 @@ def saveImgs(driver, saveDir, start):
     for imgNum, img in enumerate(imgs):  # imgNum에 이미지번호가 0부터 들어간다
         try:
             img.click()
-            time.sleep(2)
+            # time.sleep(1.2)
 
             # 아래의 xPath는 자주 바뀌는 것 같다. 나머지는 고정인거 같으니 이것만 가끔 확인해주자
-            bigImg = driver.find_element(By.XPATH, IMG_XPATH)
+            # bigImg = driver.find_element(By.XPATH, IMG_XPATH)
+            bigImg = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, IMG_XPATH)))
             src = bigImg.get_attribute('src')
             src = urllib.parse.unquote(src.split('&type')[0].split('?src=')[-1])  # hrkim 추가한 부분
             urllib.request.urlretrieve(src, saveDir + '/' + str(imgNum) + '.jpg')
