@@ -1,21 +1,19 @@
-import hashlib
+"""
+data/ 내의 모든 폴더를 순회하면서
+이미지 로딩, 번호판 검출, 인식을 진행
+OCR결과_파일해시값_원폴더.jpg 로 파일 이름을 변경하면서 data2/P?/ 로 파일 이동
+"""
+
 import os
 import shutil
 from pathlib import Path
 
 from natsort import natsorted
 
+from Data_Collection.Duplicate_Checker import calc_file_hash
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from Utils import imread_uni, trans_eng2kor_v1p3
-
-
-def calc_file_hash(path):
-    with open(path, 'rb') as f:
-        data = f.read()
-    hash = hashlib.md5(data).hexdigest()
-    return hash
-
 
 if __name__ == '__main__':
     input_root = './data'
@@ -25,7 +23,6 @@ if __name__ == '__main__':
 
     r_net = load_model_VinOCR('../../LP_Recognition/VIN_OCR/weight')
     d_net = load_model_VinLPD('../../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
-    # iwpod_tf = load_model_tf('../../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     list_dir = natsorted(os.listdir(input_root))
     for _, d in enumerate(list_dir[80:]):
@@ -71,4 +68,4 @@ if __name__ == '__main__':
                 file_name = '_'.join([plate_number, img_md5[:8], cur_dir]) + img_path.suffix
 
                 # shutil.copy(img_path, os.path.join(output_root, folder_name, file_name))
-                # shutil.move(img_path, os.path.join(output_root, folder_name, file_name))
+                shutil.move(img_path, os.path.join(output_root, folder_name, file_name))
