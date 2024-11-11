@@ -2,7 +2,7 @@ import os
 import shutil
 
 plate = 'P3'
-source_folder = rf'C:\Users\amc85\Workspace\LPR\synthetic_generation\BetaType\korean_character_cropping\03_patch\{plate}'
+source_folder = rf'../korean_character_cropping/03_patch/{plate}'
 destination_folder = f'./{plate}'
 
 
