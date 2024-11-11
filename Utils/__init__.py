@@ -78,13 +78,25 @@ bd_chn2num = bidict({'京': '00',  # Beijing
 def imread_uni(filename, flags=cv2.IMREAD_COLOR):
     """
     경로에 유니코드가 섞여있으면 이 함수를 사용하라.\n
-    cv2.imread로는 이미지를 불러올 수 없다.
+    cv2.imread로는 한글 경로 파일을 불러올 수 없다.
     :param filename: jpg, png, bmp 등 이미지 파일의 절대경로
     :param flags: cv2.IMREAD_COLOR(default), cv.IMREAD_GRAYSCALE, cv.IMREAD_UNCHANGED, ..., 참고(https://docs.opencv.org/4.10.0/d8/d6a/group__imgcodecs__flags.html#ga61d9b0126a3e57d9277ac48327799c80)
     :return:
     """
     img_temp = np.fromfile(filename, np.uint8)
     return cv2.imdecode(img_temp, flags)
+
+
+def imwrite_uni(filename, cv_img):
+    """
+    경로에 유니코드가 섞여있으면 이 함수를 사용하라.\n
+    cv2.imwrite로는 한글 경로 파일을 저장할 수 없다.
+    :param filename: jpg, png, bmp 등 저장하고자 하는 절대경로
+    :param cv_img: opencv(numpy) 이미지 배열
+    :return: 없음
+    """
+    im = Image.fromarray(cv_img)
+    im.save(filename)
 
 
 # GPT가 만듦
