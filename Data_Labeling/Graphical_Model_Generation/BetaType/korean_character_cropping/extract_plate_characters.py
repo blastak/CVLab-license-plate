@@ -8,15 +8,34 @@ from LP_Detection import BBox, Quadrilateral
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
-from Utils import imread_uni
+from LP_Recognition.VIN_OCR import load_model_VinOCR
+from Utils import imread_uni, imwrite_uni, trans_eng2kor_v1p3, bd_eng2kor_v1p3, add_text_with_background
+
+LP_xy = {
+    "P5": {
+        "h_pt": [14, 54, 66, 156],
+        "h_pt2": [50, 126],
+        "v_pt1": [90, 125, 134, 169, 178, 208, 215, 245],
+        "v_pt2": [22, 70, 105, 150, 161, 206, 217, 262, 273, 318],
+        "char_n": [(14, 50, 90, 125), (14, 50, 134, 169), (14, 54, 178, 208), (14, 54, 215, 245),
+            (66, 126, 22, 70), (66, 156, 105, 150), (66, 156, 161, 206), (66, 156, 217, 262), (66, 156, 273, 318)]
+    },
+    "P6": {
+        "h_pt": [13, 50, 64, 156],
+        "v_pt1": [90, 135, 145, 190, 200, 245],
+        "v_pt2": [15, 80, 95, 160, 175, 240, 255, 320],
+        "char_n": [(13, 50, 90, 135), (13, 50, 145, 190), (13, 50, 200, 245), (64, 156, 15, 80),
+            (64, 156, 95, 160), (64, 156, 175, 240), (64, 156, 255, 320)]
+    }
+}
 
 # P5
 h_pt=[14,54,66,156]
 h_pt2=[50,126]
 v_pt1=[90,125,134,169,178,208,215,245]
-v_pt2=[22,70,105,150,161,206,217,262,273,318]
+v_pt2=[22,82,105,150,161,206,217,262,273,318]
 char_n = [(14,50,90,125),(14,50,134,169),(14,54,178,208), (14,54,215,245),
-          (66,126,22,70),(66,156,105,150),(66,156,161,206),(66,156,217,262),(66,156,273,318)]
+          (66,126,22,82),(66,156,105,150),(66,156,161,206),(66,156,217,262),(66,156,273,318)]
 # P6
 # h_pt=[13,50,64,156]
 # v_pt1=[90,135,145,190,200,245]
@@ -41,10 +60,9 @@ def resize_image(image, b):
     cropped_image = img[y_min:y_max, x_min:x_max]
     return cv2.resize(cropped_image, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
 
-def edit_coordinate(image,click_points,img_path,save_path):
+def edit_coordinate(image,label,click_points,img_path,save_path):
     cv2.setMouseCallback("Resized Image", mouse_callback, param={'click_points': click_points})
     cv2.waitKey(0)      # 4꼭지점 클릭 후 엔터
-    i=0
     img_copy = image.copy()
     for point in click_points:
         cv2.circle(img_copy, point, 5, (0, 0, 255), -1)
@@ -52,8 +70,7 @@ def edit_coordinate(image,click_points,img_path,save_path):
     if len(click_points) == 4:
         transformed_image = transform_to_plane(image, click_points)
         draw_lines(transformed_image)
-
-    # cv2.line(transformed_image, (0,64),(335,64),(0,0,0),1)
+    i=0
     while True:
         if len(click_points) != 4:
             print('-------exit-------')
@@ -76,7 +93,13 @@ def edit_coordinate(image,click_points,img_path,save_path):
         elif key == 2621440:  # 아래쪽 화살표 키
             click_points[i] = (click_points[i][0], click_points[i][1] - 1)
         elif key == 13:     # 엔터 저장
-            save_img(transformed_image,img_path,save_path)
+            imwrite_uni(os.path.join(save_path, f'{label}.jpg'), transform_to_plane(image, click_points))
+            save_img(transformed_image,label,save_path)
+            print('-------save-------')
+            print(click_points)
+            break
+        elif key == ord('s'):  # transform 이미지만 저장
+            imwrite_uni(os.path.join(save_path, f'{label}.jpg'), transform_to_plane(image, click_points))
             print('-------save-------')
             print(click_points)
             break
@@ -106,8 +129,8 @@ def draw_points(img, points):
 def draw_lines(image):
     for h in h_pt:  # P5
         cv2.line(image, (0, h), (335, h), (0, 0, 0), 1)
-    for h in h_pt2:
-        cv2.line(image, (0, h), (169, h), (0, 0, 0), 1)
+    cv2.line(image, (0, 50), (169, 50), (0, 0, 0), 1)
+    cv2.line(image, (0, 126), (82, 126), (0, 0, 0), 1)
     for v in v_pt1:
         cv2.line(image, (v, 0), (v, 54), (0, 0, 0), 1)
     for v in v_pt2:
@@ -120,41 +143,83 @@ def draw_lines(image):
     #     cv2.line(image, (v, 64), (v, 170), (0, 0, 0), 1)
     cv2.imshow("Transformed_image", image)
 
-def save_img(image, path, save_path):
-    label = path.split('_')[1]
 
-    if not os.path.exists(os.path.join(save_path, label)):
-        os.makedirs(os.path.join(save_path, label))
+def save_img(T_image, label, save_path):
 
     for i,(a,b,c,d) in enumerate(char_n):
-        filename = f'_{i}.jpg'
-        cropped_image = image[a:b,c:d]
-        cv2.imwrite(os.path.join(save_path, label, filename), cropped_image)
+        if i==0 or i==1:
+            continue
+        # if i <2:  # P6
+        elif i==2 or i==3:    # P5
+            save_folder = os.path.join(save_path, f'_{label[i]}')
+        else:
+            save_folder = os.path.join(save_path, label[i])
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+        exist = os.listdir(save_folder)
+        exist_n = []
+        for file in exist:
+            if file.endswith('.jpg'):
+                try:
+                    number = int(file.split('.')[0])  # 파일명에서 숫자만 추출
+                    exist_n.append(number)
+                except ValueError:
+                    continue
+        if exist_n:
+            next_number = max(exist_n) + 1
+        else:
+            next_number = 0
+
+        cropped_image = T_image[a:b,c:d]
+        imwrite_uni(os.path.join(save_folder, f'{next_number}.jpg'), cropped_image)
+        next_number += 1
+
+# def save_img(T_image, label, save_path):
+#
+#     if not os.path.exists(os.path.join(save_path, label)):
+#         os.makedirs(os.path.join(save_path, label))
+#
+#     imwrite_uni(os.path.join(save_path, label, f'{label}.jpg'), T_image)
+#     for i,(a,b,c,d) in enumerate(char_n):
+#         filename =f'{i}_{label[i]}.jpg'
+#         cropped_image = T_image[a:b,c:d]
+#         imwrite_uni(os.path.join(save_path, label, filename), cropped_image)
+
 
 
 if __name__ == "__main__":
-    prefix_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\test"
+    prefix_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\추가"
     move_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\move_to"
-    save_path = r"D:\Dataset\LicensePlate\for_p5p6\extract"
+    save_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\P5_pre"
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
 
 
+    r_net = load_model_VinOCR('../../../../LP_Recognition/VIN_OCR/weight')
     d_net = load_model_VinLPD('../../../../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
-    iwpod_tf = load_model_tf('../../../../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
+    # iwpod_tf = load_model_tf('../../../../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
         i_h, i_w = img.shape[:2]
         boxes = []
         d_out = d_net.resize_N_forward(img)
+
         for _, d in enumerate(d_out):
-            bb_vinlpd = BBox(d.x, d.y, d.w, d.h)
+            bb_vinlpd = BBox(d.x, d.y, d.w, d.h, d.class_str,d.class_idx)
             boxes.append(bb_vinlpd)
 
         process = 'continue'
-        for _, b in enumerate(boxes):
-            resized_image = resize_image(img, b)
-            cv2.imshow("Resized Image", resized_image)
+        for _, bb in enumerate(boxes):
+            crop_resized_img = r_net.crop_resize_with_padding(img, bb)  #글자 인식
+            r_out = r_net.resize_N_forward(crop_resized_img)
+            bb.class_idx = 4
+            list_char = r_net.check_align(r_out, bb.class_idx + 1)
+            list_char_kr = trans_eng2kor_v1p3(list_char)
+            label = ''.join(list_char_kr)
+            print(label)
+            cv2.imshow("Image", img)    # 원본 이미지
+            resized_image = resize_image(img, bb)
+            cv2.imshow("Resized Image", resized_image)  # 번호판 ROI
             key = cv2.waitKey()
             if key == 27:  # 'esc' 프로세스 종료
                 process = 'exit'
@@ -164,13 +229,11 @@ if __name__ == "__main__":
             elif key == ord('e'):  # 'e' 수정
                 print('-----edit mode-----')
                 click_points = []
-                edit_coordinate(resized_image, click_points, img_path, save_path)
+                edit_coordinate(resized_image, label, click_points, img_path, save_path)
+                os.rename(os.path.join(prefix_path, img_path),os.path.join(move_path, img_path))
             elif key == ord('m'):  # 'm' 이동
                 os.rename(os.path.join(prefix_path, img_path),os.path.join(move_path, img_path))
-            elif key == ord('a'):  # 이상한 번호판 사진 전체 보기
-                cv2.imshow("Original Image", img)
-                key = cv2.waitKey()
-                if key == ord('d'):  # 이상한 번호판 삭제
+            elif key == ord('d'):  # 'd' 파일 삭제
                     os.remove(os.path.join(prefix_path, img_path))
 
         if process == 'exit':  # 'esc' 프로세스 종료
