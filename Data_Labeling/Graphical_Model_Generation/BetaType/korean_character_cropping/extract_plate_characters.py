@@ -44,7 +44,7 @@ char_n = [(14,50,90,125),(14,50,134,169),(14,54,178,208), (14,54,215,245),
 #           (64,156,95,160),(64,156,175,240),(64,156,255,320)]
 
 def transform_to_plane(image, src_points):
-    height, width = 170, 335
+    height, width = image.shape[:2]
     src_points = np.float32(src_points)
     dst_points = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
     matrix = cv2.getPerspectiveTransform(src_points, dst_points)
@@ -128,24 +128,29 @@ def draw_points(img, points):
 
 def draw_lines(image):
     for h in h_pt:  # P5
-        cv2.line(image, (0, h), (335, h), (0, 0, 0), 1)
-    cv2.line(image, (0, 50), (169, 50), (0, 0, 0), 1)
-    cv2.line(image, (0, 126), (82, 126), (0, 0, 0), 1)
+        h = int(h * image.shape[0] / 170)
+        cv2.line(image, (0, h), (int(335*image.shape[1]/335), h), (0, 0, 0), 1)
+    cv2.line(image, (0, int(50*image.shape[0]/170)), (int(169*image.shape[1]/335), int(50*image.shape[0]/170)), (0, 0, 0), 1)
+    cv2.line(image, (0, int(126*image.shape[0]/170)), (int(82*image.shape[1]/335), int(126*image.shape[0]/170)), (0, 0, 0), 1)
     for v in v_pt1:
-        cv2.line(image, (v, 0), (v, 54), (0, 0, 0), 1)
+        v = int(v * image.shape[1] / 335)
+        cv2.line(image, (v, 0), (v, int(54*image.shape[0]/170)), (0, 0, 0), 1)
     for v in v_pt2:
-        cv2.line(image, (v, 66), (v, 170), (0, 0, 0), 1)
+        v = int(v * image.shape[1] / 335)
+        cv2.line(image, (v, int(66*image.shape[0]/170)), (v, int(170*image.shape[0]/170)), (0, 0, 0), 1)
     # for h in h_pt:    # P6
-    #     cv2.line(image, (0, h), (335, h), (0, 0, 0), 1)
+    #     h = int(h * image.shape[0] / 170)
+    #     cv2.line(image, (0, h), (int(335*image.shape[1]/335), h), (0, 0, 0), 1)
     # for v in v_pt1:
-    #     cv2.line(image, (v, 0), (v, 50), (0, 0, 0), 1)
+    #     v = int(v * image.shape[1] / 335)
+    #     cv2.line(image, (v, 0), (v, int(50*image.shape[0]/170)), (0, 0, 0), 1)
     # for v in v_pt2:
-    #     cv2.line(image, (v, 64), (v, 170), (0, 0, 0), 1)
+    #     v = int(v * image.shape[1] / 335)
+    #     cv2.line(image, (v, int(64*image.shape[0]/170)), (v, int(170*image.shape[0]/170)), (0, 0, 0), 1)
     cv2.imshow("Transformed_image", image)
 
 
 def save_img(T_image, label, save_path):
-
     for i,(a,b,c,d) in enumerate(char_n):
         if i==0 or i==1:
             continue
@@ -186,13 +191,11 @@ def save_img(T_image, label, save_path):
 #         imwrite_uni(os.path.join(save_path, label, filename), cropped_image)
 
 
-
 if __name__ == "__main__":
-    prefix_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\추가"
+    prefix_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\HR"
     move_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\move_to"
     save_path = r"D:\Dataset\LicensePlate\for_p5p6\extract\P5_pre"
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
-
 
     r_net = load_model_VinOCR('../../../../LP_Recognition/VIN_OCR/weight')
     d_net = load_model_VinLPD('../../../../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
@@ -203,7 +206,6 @@ if __name__ == "__main__":
         i_h, i_w = img.shape[:2]
         boxes = []
         d_out = d_net.resize_N_forward(img)
-
         for _, d in enumerate(d_out):
             bb_vinlpd = BBox(d.x, d.y, d.w, d.h, d.class_str,d.class_idx)
             boxes.append(bb_vinlpd)
@@ -235,6 +237,5 @@ if __name__ == "__main__":
                 os.rename(os.path.join(prefix_path, img_path),os.path.join(move_path, img_path))
             elif key == ord('d'):  # 'd' 파일 삭제
                     os.remove(os.path.join(prefix_path, img_path))
-
         if process == 'exit':  # 'esc' 프로세스 종료
             break
