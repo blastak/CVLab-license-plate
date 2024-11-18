@@ -181,3 +181,22 @@ def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
     except Exception as e:
         print(e)
         print(json_path)
+
+
+def iou(bb1, bb2):
+    """
+    intersection over union 계산
+    :param bb1: bounding box를 의미한다. len==4인 list로, [x1, y1, x2, y2] 의 순서를 갖는다.
+    :param bb2: bb1과 같다.
+    :return: intersection over union 값
+    """
+    xx1 = np.maximum(bb1[0], bb2[0])
+    yy1 = np.maximum(bb1[1], bb2[1])
+    xx2 = np.minimum(bb1[2], bb2[2])
+    yy2 = np.minimum(bb1[3], bb2[3])
+    w = np.maximum(0., xx2 - xx1)
+    h = np.maximum(0., yy2 - yy1)
+    wh = w * h
+    o = wh / ((bb1[2] - bb1[0]) * (bb1[3] - bb1[1]) +
+              (bb2[2] - bb2[0]) * (bb2[3] - bb2[1]) - wh)
+    return o
