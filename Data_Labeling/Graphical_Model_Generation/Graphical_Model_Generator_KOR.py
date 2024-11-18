@@ -21,6 +21,10 @@ LP_char_xywh = {
            (186, 84), (78, 116), (264, 84), (78, 116), (342, 84), (78, 116), ],
     'P4': [(32, 13.5), (55, 83), (87, 13.5), (55, 83), (142, 13.5), (55, 83), (197, 13.5), (71, 83),  # P4
            (268, 13.5), (55, 83), (323, 13.5), (55, 83), (378, 13.5), (55, 83), (433, 13.5), (55, 83), ],
+    'P5': [(90, 14), (79, 36), (178, 14), (30, 40), (215, 14), (30, 40), (22, 60), (60, 60),  # P5
+           (105, 60), (45, 90), (161, 60), (45, 90), (217, 60), (45, 90), (273, 60), (45, 90), ],
+    'P6': [(90, 13), (45, 37), (145, 13), (45, 37), (200, 13), (45, 37),                                # P6
+           (15, 64), (65, 92), (95, 64), (65, 92), (175, 64), (65, 92), (255, 64), (65, 92), ],
 }
 
 LP_plate_wh = {
@@ -31,6 +35,8 @@ LP_plate_wh = {
     'P2': (440, 200),
     'P3': (440, 220),
     'P4': (520, 110),
+    'P5': (335, 170),
+    'P6': (335, 170),
 }
 
 
@@ -107,6 +113,38 @@ class Graphical_Model_Generator_KOR:
                 img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p), cv2.IMREAD_UNCHANGED),
                                  self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
+
+        elif self.LP_cls == 'P5':
+            for i, ch in enumerate(demand_str):
+                if i == 1:
+                    continue
+                p = ''
+                if ch.isdigit():  # number
+                    if i == 2 or i == 3:  # 윗자리 숫자 예외처리
+                        p = '/number/' + f'/{ch}_1/'
+                    else:
+                        p = '/number/' + f'/{ch}/'
+
+                else:  # korean
+                    p = '/korean/' + f'/{bd_eng2kor_v1p3.inverse[ch]}/'
+                    if i == 0:
+                        p = p[:-1] + f'{bd_eng2kor_v1p3.inverse[demand_str[1]]}/'
+                        i += 1
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p), cv2.IMREAD_UNCHANGED),
+                                 self.char_xywh2[((i - 1) * 2) + 1])
+                self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
+        elif self.LP_cls == 'P6':
+            p=''
+            for i in range(7):
+                if i == 0 or i == 1:
+                    p = '/number/' + f'/{demand_str[i]}_1/'
+                elif i==2:
+                    p = '/korean/' + f'/{bd_eng2kor_v1p3.inverse[demand_str[i]]}/'
+                else:
+                    p = '/number/' + f'/{demand_str[i]}/'
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[(i * 2) + 1])
+                self.overlay(img_template, img, self.char_xywh2[(i * 2)])
+
         else:
             for i, ch in enumerate(demand_str):
                 p = ''
@@ -168,5 +206,17 @@ if __name__ == '__main__':
     LP_cls = 'P4'
     generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
     img = generator.make_LP('대전31아4335')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P5'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('강원72가4090')
+    cv2.imshow('img', img)
+    cv2.waitKey()
+
+    LP_cls = 'P6'
+    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/', LP_cls)
+    img = generator.make_LP('11도1229')
     cv2.imshow('img', img)
     cv2.waitKey()
