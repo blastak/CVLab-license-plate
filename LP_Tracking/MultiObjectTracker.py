@@ -90,9 +90,8 @@ class Track:
 
     def predict(self):
         x_ = self.kf.predict()
-        # x_[2] = max(0, x_[2])  # sf 가 음수가 되는 경우를 방지
+        x_[2] = max(1, x_[2])  # sf 가 음수가 되는 경우를 방지
         self.last_xyxy = xywh2xyxy(cxcywh2xywh(cxcysfar2cxcywh(x_[:4])))
-        print(self.last_xyxy)
         return self.last_xyxy
 
     def correct(self, z):
@@ -185,6 +184,7 @@ if __name__ == '__main__':
     myTracker = Tracker()
 
     cnt_continue = 0
+    cnt_frame = 0
     while cap.isOpened():
         is_grabbed = cap.grab()
         if not is_grabbed:
@@ -196,6 +196,7 @@ if __name__ == '__main__':
         if not succ:
             break
         cnt_continue = 0
+        cnt_frame += 1
 
         # detection
         d_out = d_net.resize_N_forward(img_orig)
@@ -203,6 +204,7 @@ if __name__ == '__main__':
         xyxys = []
         for _, d in enumerate(d_out):
             xyxys.append(xywh2xyxy([d.x, d.y, d.w, d.h]))
+            cv2.rectangle(img_orig, (d.x, d.y, d.w, d.h), color=(255, 255, 255), thickness=2)
 
         myTracker.track(xyxys)
 
@@ -211,7 +213,7 @@ if __name__ == '__main__':
             for traj in trajectories:
                 traj = list(map(int, traj))
                 cv2.rectangle(img_orig, traj[:2], traj[2:], color=trk.color, thickness=2)
-
+        cv2.putText(img_orig, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
         cv2.imshow('img_orig', img_orig)
         if cv2.waitKey(1) == 27:
             break
