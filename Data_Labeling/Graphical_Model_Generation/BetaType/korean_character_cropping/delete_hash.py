@@ -1,6 +1,7 @@
 import os
-import hashlib
+
 from Data_Collection.Duplicate_Checker import calc_file_hash
+
 
 def remove_duplicate_images(path):
     """폴더 내에서 해시값이 같은 중복 이미지 파일 삭제"""
@@ -24,6 +25,7 @@ def remove_duplicate_images(path):
     for duplicate in duplicates:
         print(f"중복 파일 발견: {duplicate}")
         os.remove(duplicate)
+
 
 if __name__ == "__main__":
     folder_path = r'D:\Dataset\LicensePlate\for_p5p6\extract\HR'
