@@ -7,7 +7,7 @@ from Utils import imread_uni, add_text_with_background
 
 class VinLPD(OcvYoloBase):
     def __init__(self, _model_path, _weight_path, _classes_path):
-        super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.24, _iou_thresh=0.5)
+        super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.24, _iou_thresh=0.3)
 
 
 def load_model_VinLPD(path_base):

@@ -20,10 +20,14 @@ class LinearKalmanFilter:
         # Project the covariance ahead
         self.P_ = self.A @ self.P @ self.A.T + self.Q
 
+        # handle the case when there will be no measurement before the next predict. (참고 opencv kalman.cpp)
+        self.x = self.x_.copy()
+        self.P = self.P_.copy()
+
         return self.x_
 
     def correct(self, z):
-        # Compute the Kalman gain
+        # Compute the Kalman gain (참고 https://campar.in.tum.de/twiki/pub/Chair/KalmanFilter/updates_discrete2.jpg)
         K = self.P_ @ self.H.T @ np.linalg.inv(self.H @ self.P_ @ self.H.T + self.R)
 
         # Update state estimate
