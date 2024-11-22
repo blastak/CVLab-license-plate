@@ -27,7 +27,7 @@ if __name__ == '__main__':
     for i, bb in enumerate(d_out):
         cv2.rectangle(img_bb, (bb.x, bb.y, bb.w, bb.h), (255, 255, 0), 3)  # bounding box
         font_size = bb.w // 5  # magic number
-        img_bb = add_text_with_background(img_bb, bb.class_str, position=(bb.x, bb.y - font_size * 1.2), font_size=font_size, padding=0).astype(np.uint8)
+        img_bb = add_text_with_background(img_bb, bb.class_str, position=(bb.x, bb.y - font_size), font_size=font_size, padding=0).astype(np.uint8)
     cv2.namedWindow('img_bb', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img_bb', tuple(map(lambda x: int(x * 0.9), (1920, 1080))))
     cv2.imshow('img_bb', img_bb)

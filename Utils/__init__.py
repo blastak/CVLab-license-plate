@@ -100,7 +100,7 @@ def imwrite_uni(filename, cv_img):
 
 
 # GPT가 만듦
-def add_text_with_background(image, text, font_path="malgunbd.ttf", font_size=20,
+def add_text_with_background(image, text, font_path="NanumGothicCoding-Bold.ttf", font_size=20,
                              font_color=(0, 255, 0), bg_color=(0, 0, 0),
                              position=(50, 50), padding=5):
     """
@@ -122,7 +122,11 @@ def add_text_with_background(image, text, font_path="malgunbd.ttf", font_size=20
     draw = ImageDraw.Draw(img_pil)
 
     # 폰트 설정
-    unicode_font = ImageFont.truetype(font=font_path, size=font_size)
+    try:
+        unicode_font = ImageFont.truetype(font=font_path, size=font_size)
+    except OSError:
+        font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), font_path)  # ttf 파일의 절대경로로 변경
+        unicode_font = ImageFont.truetype(font=font_path, size=font_size)
 
     # 텍스트의 크기를 계산 (텍스트 경계를 반환)
     left, top, right, bottom = draw.textbbox((0, 0), text, font=unicode_font)
@@ -132,9 +136,9 @@ def add_text_with_background(image, text, font_path="malgunbd.ttf", font_size=20
     # 텍스트 배경 사각형 좌표 계산
     x, y = position
     background_left = x - padding
-    background_top = y - padding + font_size // 4  # magic number
+    background_top = y - padding
     background_right = x + text_width + padding
-    background_bottom = y + text_height + padding + font_size // 4  # magic number
+    background_bottom = y + text_height + padding
 
     # 배경 그리기 (사각형)
     draw.rectangle([background_left, background_top, background_right, background_bottom], fill=bg_color)

@@ -76,6 +76,6 @@ if __name__ == '__main__':
         img_with_label = img.copy()
         cv2.rectangle(img_with_label, (left, top), (right, bottom), (255, 255, 0), 3)  # bounding box
         font_size = (right - left) // 5  # magic number
-        img_with_label = add_text_with_background(img_with_label, plate_number, position=(left, top - font_size * 1.2), font_size=font_size, padding=0)
+        img_with_label = add_text_with_background(img_with_label, plate_number, position=(left, top - font_size), font_size=font_size, padding=0)
         cv2.imshow('img_with_label', img_with_label)
         cv2.waitKey()
