@@ -6,13 +6,15 @@ from LP_Detection.VIN_LPD import load_model_VinLPD
 from LinearKalmanFilter import LinearKalmanFilter
 from Utils import iou
 
-colors = [(0, 0, 255),
-          (0, 128, 255),
-          (0, 255, 255),
-          (0, 255, 0),
-          (255, 0, 0),
-          (128, 0, 0),
-          (255, 0, 255)
+colors = [(128, 0, 255),  # Rose
+          (0, 0, 255),  # Red
+          (0, 128, 255),  # Orange
+          (0, 255, 255),  # Yellow
+          (0, 255, 0),  # Green
+          (255, 255, 0),  # Cyan
+          (255, 0, 0),  # Blue
+          (128, 0, 255),  # Violet
+          (255, 0, 255),  # Magenta
           ]
 
 
@@ -74,8 +76,8 @@ class Track:
         A[:3, 4:] = np.eye(3)
         H = np.eye(dim_z, dim_x, dtype=np.float32)
         Q = np.eye(dim_x, dtype=np.float32) * 0.01
-        R = np.eye(dim_z, dtype=np.float32) * 1
-        x0 = np.float32([cx, cy, sf, ar, 0, 0, 0])
+        R = np.eye(dim_z, dtype=np.float32) * np.float32([0.1, 0.1, 0.5, 0.5])
+        x0 = np.float32([cx, cy, sf, ar, 0, 0, 100])
         self.kf = LinearKalmanFilter(dim_x, A, H, Q, R, x0)
 
         Track.__id += 1
@@ -85,8 +87,8 @@ class Track:
         self.cnt_consecutive_invis = 0
 
         self.last_xyxy = xywh2xyxy(cxcywh2xywh(cxcysfar2cxcywh(x0[:4])))
-        self.trajectory = []
-        self.color = colors[Track.__id % len(colors)]
+        self.trajectories = []
+        self.color = colors[self.id % len(colors)]
 
     def predict(self):
         x_ = self.kf.predict()
@@ -100,8 +102,8 @@ class Track:
         return self.last_xyxy
 
     def update_trajectory(self):
-        self.trajectory.append(self.last_xyxy)
-        return self.trajectory
+        self.trajectories.append(self.last_xyxy)
+        return self.trajectories
 
 
 class Tracker:
@@ -142,7 +144,7 @@ class Tracker:
             matched = linear_sum_assignment(mat_cost)
 
             for t, d in list(zip(*matched)):
-                THRESH_IOU = 0.1
+                THRESH_IOU = 0.05
                 if mat_iou[t, d] >= THRESH_IOU:
                     assigned_td_pairs.append([t, d])
                     unassigned_trks.remove(t)
@@ -185,8 +187,10 @@ if __name__ == '__main__':
 
     cnt_continue = 0
     cnt_frame = 0
+    delay = 1
     while cap.isOpened():
         is_grabbed = cap.grab()
+        cnt_frame += 1
         if not is_grabbed:
             cnt_continue += 1
             if cnt_continue > 3:
@@ -196,15 +200,16 @@ if __name__ == '__main__':
         if not succ:
             break
         cnt_continue = 0
-        cnt_frame += 1
 
         # detection
         d_out = d_net.resize_N_forward(img_orig)
 
+        img_disp = img_orig.copy()
         xyxys = []
         for _, d in enumerate(d_out):
             xyxys.append(xywh2xyxy([d.x, d.y, d.w, d.h]))
-            cv2.rectangle(img_orig, (d.x, d.y, d.w, d.h), color=(255, 255, 255), thickness=2)
+            cv2.rectangle(img_disp, (d.x, d.y, d.w, d.h), color=(255, 255, 255), thickness=1)
+            cv2.circle(img_disp, (d.x + d.w // 2, d.y + d.h // 2), 1, (0, 255, 0), 3)
 
         myTracker.track(xyxys)
 
@@ -212,11 +217,17 @@ if __name__ == '__main__':
             trajectories = trk.update_trajectory()
             for traj in trajectories:
                 traj = list(map(int, traj))
-                cv2.rectangle(img_orig, traj[:2], traj[2:], color=trk.color, thickness=2)
-        cv2.putText(img_orig, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
-        cv2.imshow('img_orig', img_orig)
-        if cv2.waitKey(1) == 27:
+                cv2.rectangle(img_disp, traj[:2], traj[2:], color=trk.color, thickness=2)
+                cv2.circle(img_disp, ((traj[0] + traj[2]) // 2, (traj[1] + traj[3]) // 2), 2, trk.color, 3)
+
+        cv2.putText(img_disp, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
+        cv2.imshow('img_disp', img_disp)
+
+        key_in = cv2.waitKey(delay)
+        if key_in == 27:  # ESC
             break
+        elif key_in == 32:  # space
+            delay = 1 - delay
 
     cap.release()
     cv2.destroyAllWindows()
