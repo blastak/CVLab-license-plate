@@ -9,11 +9,12 @@ from LP_Detection import BBox, Quadrilateral
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
-from Utils import imread_uni
+from LP_Recognition.VIN_OCR import load_model_VinOCR
+from Utils import imread_uni, imwrite_uni, trans_eng2kor_v1p3, save_json
 
 
-def generate_license_plate(generator, plate_number):
-    img_gen = generator.make_LP(plate_number)
+def generate_license_plate(generator, plate_type, plate_number):
+    img_gen = generator.make_LP(plate_number, plate_type)
     img_gen = cv2.erode(img_gen, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))
     img_gen = cv2.resize(img_gen, None, fx=0.5, fy=0.5)
     return img_gen
@@ -101,6 +102,33 @@ def calculate_total_transformation(mat_A, mat_H):
     mat_T = mat_A_inv @ mat_H
     return mat_T
 
+def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
+    shapes = []
+    print("1 or 2 or 3")
+    key_in = cv2.waitKey()
+    if key_in == ord('1'):
+        print(1)
+        quad_xy = dst_xy_list[0]
+    elif key_in == ord('2'):
+        print(2)
+        quad_xy = dst_xy_list[1]
+    elif key_in == ord('3'):
+        print(3)
+        quad_xy = dst_xy_list[2]
+    quad_xy = quad_xy[0].tolist()
+    shapes = [
+        dict(
+        label=plate_type+'_'+plate_number,
+        points=quad_xy,
+        group_id=None,
+        description='',
+        shape_type='polygon',
+        flags={},
+        mask=None
+        )
+    ]
+    save_json(path, shapes, imagePath, imageHeight, imageWidth)
+
 
 if __name__ == '__main__':
     prefix_path = './Dataset_Loader/sample_image_label/파클'
@@ -108,6 +136,7 @@ if __name__ == '__main__':
 
     loader = DatasetLoader_ParkingView(prefix_path)  # xml 읽을 준비
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
+    r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     for _, img_path in enumerate(img_paths):
@@ -123,7 +152,7 @@ if __name__ == '__main__':
         # VIN_LPD로 검출
         d_out = d_net.resize_N_forward(img)
         for _, d in enumerate(d_out):
-            bb_vinlpd = BBox(d.x, d.y, d.w, d.h)
+            bb_vinlpd = BBox(d.x, d.y, d.w, d.h, class_str=d.class_str, class_idx=d.class_idx)
             boxes.append(bb_vinlpd)
 
         # iwpod_tf로 검출
@@ -133,11 +162,15 @@ if __name__ == '__main__':
             boxes.append(qb_iwpod)
 
         img_results = []
-        generator = Graphical_Model_Generator_KOR('./Graphical_Model_Generation/BetaType/korean_LP', plate_type)  # 반복문 안에서 객체 생성 시 오버헤드가 발생
+        dst_xy_list = []
+        generator = Graphical_Model_Generator_KOR('./Graphical_Model_Generation/BetaType/korean_LP')  # 반복문 안에서 객체 생성 시 오버헤드가 발생
         for _, bb_or_qb in enumerate(boxes):
-            img_gened = generate_license_plate(generator, plate_number)
+            img_gened = generate_license_plate(generator, plate_type, plate_number)
             g_h, g_w = img_gened.shape[:2]
             mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+            cv2.imshow('mask_text_area', mask_text_area)
+            cv2.waitKey()
+            # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
             pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
             mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
@@ -160,6 +193,7 @@ if __name__ == '__main__':
             cv2.polylines(img_superimposed, [np.int32(dst_xy)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
 
             img_results.append([img_superimposed, img])
+            dst_xy_list.append(dst_xy)
 
         k = 0
         key_in = 0
@@ -172,7 +206,10 @@ if __name__ == '__main__':
                 k = 0
             elif key_in == ord('2'):
                 k = 1
-            else:
+            elif key_in == ord('s'):
+                save(dst_xy_list, plate_type, plate_number, prefix_path, img_path, img.shape[0], img.shape[1])
+                break
+            elif key_in == ord('p'):
                 break
         if key_in == 27:
             break
