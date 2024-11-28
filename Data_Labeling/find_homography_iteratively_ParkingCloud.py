@@ -1,4 +1,5 @@
 import os
+from sre_constants import error
 
 import cv2
 import numpy as np
@@ -107,9 +108,9 @@ def calculate_total_transformation(mat_A, mat_H):
     mat_T = mat_A_inv @ mat_H
     return mat_T
 
-def save_quad(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
+def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
-    quad_xy = dst_xy_list[2].tolist()
+    quad_xy = dst_xy.tolist()
     bb = cal_BB(quad_xy)
     bb_xy = [[bb[0].x,bb[0].y],[bb[0].x+bb[0].w,bb[0].y+bb[0].h]]
     shape = dict(
@@ -135,15 +136,25 @@ def save_quad(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeigh
 
     save_json(path, shapes, imagePath, imageHeight, imageWidth)
 
+def cal_IOU(b, p):
+    rect = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h), (b.x, b.y + b.h)])
+    para = np.float32([p[0], p[1], p[2], p[3]])
+    inter_area, _ = cv2.intersectConvexConvex(rect, para)
+    rect_area = b.w * b.h
+    para_area = cv2.contourArea(para)
+    union_area = rect_area + para_area - inter_area
+    iou = inter_area / union_area if union_area > 0 else 0
+    return iou
 
 if __name__ == '__main__':
-    prefix_path = './Dataset_Loader/sample_image_label/파클'
+    prefix_path = r'./Dataset_Loader/sample_image_label/파클'
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
 
     loader = DatasetLoader_ParkingView(prefix_path)  # xml 읽을 준비
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
+    error_list = []
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
@@ -166,6 +177,12 @@ if __name__ == '__main__':
         for _, p in enumerate(parallelograms):
             qb_iwpod = Quadrilateral(p[0], p[1], p[2], p[3])  # ex) p[0] : (342.353, 454.223)
             boxes.append(qb_iwpod)
+
+        # XML BBox와 iwpod_tf corner 비교
+        IOU = 0
+        if parallelograms:
+            IOU = cal_IOU(bb_xml, parallelograms[0])
+            print(IOU)
 
         img_results = []
         dst_xy_list = []
@@ -200,6 +217,16 @@ if __name__ == '__main__':
             dst_xy_list.append(dst_xy)
 
         print(plate_number)
-        cv2.imshow("img", img_results[2][0])
+
+        if IOU > 0.5:
+            i = 2
+        else:
+            i = 0
+            error_list.append(plate_number)
+        dst_xy = dst_xy_list[i]
+        cv2.imshow("img", img_results[i][0])
         cv2.waitKey(1)
-        save_quad(dst_xy_list, plate_type, plate_number, prefix_path, img_path, img.shape[0], img.shape[1])
+        save_quad(dst_xy, plate_type, plate_number, prefix_path, img_path, img.shape[0], img.shape[1])
+    with open("error_log.txt", "w", encoding="utf-8") as file:
+        for error in error_list:
+            file.write(error + "\n")
