@@ -156,7 +156,7 @@ def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
     data = dict(
         version="5.5.0",  # 버전 통일
         flags={},
-        shapes=[shapes],
+        shapes=shapes,
         imagePath=imagePath,
         imageData=None,
         imageHeight=imageHeight,
