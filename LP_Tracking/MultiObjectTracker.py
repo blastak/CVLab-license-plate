@@ -4,66 +4,7 @@ from scipy.optimize import linear_sum_assignment
 
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LinearKalmanFilter import LinearKalmanFilter
-from Utils import iou
-
-colors = [(128, 0, 255),  # Rose
-          (0, 0, 255),  # Red
-          (0, 128, 255),  # Orange
-          (0, 255, 255),  # Yellow
-          (0, 255, 0),  # Green
-          (255, 255, 0),  # Cyan
-          (255, 0, 0),  # Blue
-          (128, 0, 255),  # Violet
-          (255, 0, 255),  # Magenta
-          ]
-
-
-def xywh2xyxy(xywh):
-    assert len(xywh) == 4
-    xyxy = [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
-    return xyxy
-
-
-def xyxy2xywh(xyxy):
-    assert len(xyxy) == 4
-    xywh = [xyxy[0], xyxy[1], xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]]
-    return xywh
-
-
-def xywh2cxcywh(xywh):
-    assert len(xywh) == 4
-    w, h = xywh[2], xywh[3]
-    cx = xywh[0] + w / 2
-    cy = xywh[1] + h / 2
-    cxcywh = [cx, cy, w, h]
-    return cxcywh
-
-
-def cxcywh2xywh(cxcywh):
-    assert len(cxcywh) == 4
-    w, h = cxcywh[2], cxcywh[3]
-    x = cxcywh[0] - w / 2
-    y = cxcywh[1] - h / 2
-    xywh = [x, y, w, h]
-    return xywh
-
-
-def cxcywh2cxcysfar(cxcywh):
-    assert len(cxcywh) == 4
-    w, h = cxcywh[2], cxcywh[3]
-    sf = w * h
-    ar = w / h
-    cxcysfar = [cxcywh[0], cxcywh[1], sf, ar]
-    return cxcysfar
-
-
-def cxcysfar2cxcywh(cxcysfar):
-    assert len(cxcysfar) == 4
-    sf, ar = cxcysfar[2], cxcysfar[3]
-    w = (sf * ar) ** 0.5
-    h = sf / w
-    cxcywh = [cxcysfar[0], cxcysfar[1], w, h]
-    return cxcywh
+from Utils import iou, colors, xywh2xyxy, cxcywh2xywh, cxcysfar2cxcywh, cxcywh2cxcysfar, xywh2cxcywh, xyxy2xywh
 
 
 class Track:

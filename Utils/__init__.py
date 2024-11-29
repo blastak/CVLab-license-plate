@@ -1,5 +1,7 @@
 import json
 import os
+from xml.etree import ElementTree
+from xml.etree.ElementTree import Element, SubElement
 
 import cv2
 import numpy as np
@@ -26,6 +28,17 @@ bd_eng2kor_v1p3 = bidict(
      'DF': '울', 'DG': '인', 'DH': '전', 'DI': '제', 'DJ': '충', 'DK': '원', 'DL': '남', 'DM': '북', 'DN': '산',
      'DO': '종', 'DP': '천', 'CA': '외', 'CB': '영', 'CC': '준', 'CD': '협', 'CE': '교', 'CF': '기', 'CG': '정',
      'CH': '표'})
+
+colors = [(128, 0, 255),  # Rose
+          (0, 0, 255),  # Red
+          (0, 128, 255),  # Orange
+          (0, 255, 255),  # Yellow
+          (0, 255, 0),  # Green
+          (255, 255, 0),  # Cyan
+          (255, 0, 0),  # Blue
+          (128, 0, 255),  # Violet
+          (255, 0, 255),  # Magenta
+          ]
 
 
 def trans_eng2kor_v1p3(list_of_txt: list):
@@ -152,6 +165,54 @@ def add_text_with_background(image, text, font_path="NanumGothicCoding-Bold.ttf"
     return result_image
 
 
+def xywh2xyxy(xywh):
+    assert len(xywh) == 4
+    xyxy = [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
+    return xyxy
+
+
+def xyxy2xywh(xyxy):
+    assert len(xyxy) == 4
+    xywh = [xyxy[0], xyxy[1], xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]]
+    return xywh
+
+
+def xywh2cxcywh(xywh):
+    assert len(xywh) == 4
+    w, h = xywh[2], xywh[3]
+    cx = xywh[0] + w / 2
+    cy = xywh[1] + h / 2
+    cxcywh = [cx, cy, w, h]
+    return cxcywh
+
+
+def cxcywh2xywh(cxcywh):
+    assert len(cxcywh) == 4
+    w, h = cxcywh[2], cxcywh[3]
+    x = cxcywh[0] - w / 2
+    y = cxcywh[1] - h / 2
+    xywh = [x, y, w, h]
+    return xywh
+
+
+def cxcywh2cxcysfar(cxcywh):
+    assert len(cxcywh) == 4
+    w, h = cxcywh[2], cxcywh[3]
+    sf = w * h
+    ar = w / h
+    cxcysfar = [cxcywh[0], cxcywh[1], sf, ar]
+    return cxcysfar
+
+
+def cxcysfar2cxcywh(cxcysfar):
+    assert len(cxcysfar) == 4
+    sf, ar = cxcysfar[2], cxcysfar[3]
+    w = (sf * ar) ** 0.5
+    h = sf / w
+    cxcywh = [cxcysfar[0], cxcysfar[1], w, h]
+    return cxcywh
+
+
 def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
     data = dict(
         version="5.5.0",  # 버전 통일
@@ -167,10 +228,50 @@ def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
       "version": "5.5.0",
       "flags": {},
       "shapes": [
-        {},
-        {},
-        {},
-        {}
+        {
+          "label": "P3_서울71바8669",
+          "points": [
+            [
+              408.0,
+              424.0
+            ],
+            [
+              707.0,
+              593.0
+            ]
+          ],
+          "group_id": null,
+          "description": "",
+          "shape_type": "rectangle",
+          "flags": {},
+          "mask": null
+        },
+        {
+          "label": "P3_서울71바8669",
+          "points": [
+            [
+              412.66490765171505,
+              438.2585751978892
+            ],
+            [
+              679.155672823219,
+              428.49604221635883
+            ],
+            [
+              692.6121372031662,
+              586.0158311345647
+            ],
+            [
+              429.02374670184696,
+              589.1820580474933
+            ]
+          ],
+          "group_id": null,
+          "description": "",
+          "shape_type": "polygon",
+          "flags": {},
+          "mask": null
+        }
       ],
       "imagePath": "in_L01_0_20161125_182519_182715_438_서울71바8669.jpg",
       "imageData": null,
@@ -185,6 +286,39 @@ def save_json(json_path, shapes, imagePath, imageHeight, imageWidth):
     except Exception as e:
         print(e)
         print(json_path)
+
+
+def save_xml(xml_path, xyxys, labels):
+    '''
+    <annotation>
+    <filename></filename>
+    <object>
+        <name>P3_서울71바8669</name>
+        <bndbox>
+            <xmin>408</xmin>
+            <ymin>424</ymin>
+            <xmax>707</xmax>
+            <ymax>593</ymax>
+        </bndbox>
+    </object>
+    </annotation>
+    '''
+    assert len(xyxys) == len(labels)
+    root = Element('annotation')
+    SubElement(root, 'filename')
+    for i, xyxy in enumerate(xyxys):
+        obj = SubElement(root, 'object')
+        SubElement(obj, 'name').text = labels[i]
+        bndbox = SubElement(obj, 'bndbox')
+        SubElement(bndbox, 'xmin').text = str(xyxy[0])
+        SubElement(bndbox, 'ymin').text = str(xyxy[1])
+        SubElement(bndbox, 'xmax').text = str(xyxy[2])
+        SubElement(bndbox, 'ymax').text = str(xyxy[3])
+
+    with open(xml_path, 'w', encoding='utf-8') as f:
+        ElementTree.indent(root)
+        print(ElementTree.tostring(root, encoding='utf-8').decode(), file=f)
+        # f.write(ElementTree.tostring(root,encoding='utf-8').decode())
 
 
 def iou(bb1, bb2):
