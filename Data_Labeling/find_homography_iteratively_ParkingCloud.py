@@ -1,5 +1,4 @@
 import os
-from sre_constants import error
 
 import cv2
 import numpy as np
@@ -11,7 +10,7 @@ from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner, cal_
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from Utils import imread_uni, imwrite_uni, trans_eng2kor_v1p3, save_json
+from Utils import imread_uni, save_json
 
 
 def generate_license_plate(generator, plate_type, plate_number):
@@ -21,11 +20,15 @@ def generate_license_plate(generator, plate_type, plate_number):
     return img_gen
 
 
-def extract_N_track_features(img_gened, mask_text_area, img_front):
+def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
     img_gen_gray = cv2.cvtColor(img_gened, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_gen_gray = 255 - img_gen_gray
     pt_gen = cv2.goodFeaturesToTrack(img_gen_gray, 500, 0.01, 5, mask=mask_text_area)  # feature extraction
 
     img_front_gray = cv2.cvtColor(img_front, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_front_gray = 255 - img_front_gray
     img_front_gray_histeq = cv2.equalizeHist(img_front_gray)  # histogram equalization
     pt_tracked, status, err = cv2.calcOpticalFlowPyrLK(img_gen_gray, img_front_gray_histeq, pt_gen, None)  # feature tracking
 
@@ -59,6 +62,11 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
         cr_y = 14 - 10
         cr_w = 296 + 20
         cr_h = 142 + 20
+    elif plate_type == 'P6':
+        cr_x = 15 - 10
+        cr_y = 13 - 10
+        cr_w = 305 + 20
+        cr_h = 143 + 20
     mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
     mask_text_area[cr_y:cr_y + cr_h, cr_x:cr_x + cr_w] = 255
     return mask_text_area
@@ -108,13 +116,14 @@ def calculate_total_transformation(mat_A, mat_H):
     mat_T = mat_A_inv @ mat_H
     return mat_T
 
+
 def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
     quad_xy = dst_xy.tolist()
     bb = cal_BB(quad_xy)
-    bb_xy = [[bb[0].x,bb[0].y],[bb[0].x+bb[0].w,bb[0].y+bb[0].h]]
+    bb_xy = [[bb[0].x, bb[0].y], [bb[0].x + bb[0].w, bb[0].y + bb[0].h]]
     shape = dict(
-        label=plate_type+'_'+plate_number,
+        label=plate_type + '_' + plate_number,
         points=quad_xy[0],
         group_id=None,
         description='',
@@ -135,6 +144,7 @@ def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, im
     shapes.append(shape)
 
     save_json(path, shapes, imagePath, imageHeight, imageWidth)
+
 
 def cal_IOU(b, p):
     rect = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h), (b.x, b.y + b.h)])
@@ -193,7 +203,7 @@ if __name__ == '__main__':
             mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
-            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
+            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
             mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
             mat_T = calculate_total_transformation(mat_A, mat_H)
 
