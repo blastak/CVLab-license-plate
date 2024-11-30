@@ -156,6 +156,7 @@ def cal_IOU(b, p):
     iou = inter_area / union_area if union_area > 0 else 0
     return iou
 
+
 if __name__ == '__main__':
     prefix_path = r'./Dataset_Loader/sample_image_label/파클'
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
