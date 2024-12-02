@@ -6,11 +6,13 @@ import numpy as np
 from Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from LP_Detection import BBox, Quadrilateral
-from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner, cal_BB
+from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from Utils import imread_uni, save_json
+from Utils import imread_uni, save_json, imwrite_uni
+
+extensions = ['.jpg', '.png', '.xml', '.json']
 
 
 def generate_license_plate(generator, plate_type, plate_number):
@@ -120,24 +122,12 @@ def calculate_total_transformation(mat_A, mat_H):
 def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
     quad_xy = dst_xy.tolist()
-    bb = cal_BB(quad_xy)
-    bb_xy = [[bb[0].x, bb[0].y], [bb[0].x + bb[0].w, bb[0].y + bb[0].h]]
     shape = dict(
         label=plate_type + '_' + plate_number,
         points=quad_xy[0],
         group_id=None,
         description='',
         shape_type='polygon',
-        flags={},
-        mask=None
-    )
-    shapes.append(shape)
-    shape = dict(
-        label=plate_type + '_' + plate_number,
-        points=bb_xy,
-        group_id=None,
-        description='',
-        shape_type='rectangle',
         flags={},
         mask=None
     )
@@ -156,6 +146,7 @@ def cal_IOU(b, p):
     iou = inter_area / union_area if union_area > 0 else 0
     return iou
 
+
 if __name__ == '__main__':
     prefix_path = r'./Dataset_Loader/sample_image_label/파클'
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
@@ -164,7 +155,6 @@ if __name__ == '__main__':
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
-    error_list = []
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
@@ -232,11 +222,27 @@ if __name__ == '__main__':
             i = 2
         else:
             i = 0
-            error_list.append(plate_number)
         dst_xy = dst_xy_list[i]
-        cv2.imshow("img", img_results[i][0])
-        cv2.waitKey(1)
+        # cv2.imshow("img", img_results[i][0])
+        # cv2.waitKey(1)
         save_quad(dst_xy, plate_type, plate_number, prefix_path, img_path, img.shape[0], img.shape[1])
-    with open("error_log.txt", "w", encoding="utf-8") as file:
-        for error in error_list:
-            file.write(error + "\n")
+
+        # type별 폴더 이동
+        move_path = os.path.join(prefix_path, plate_type)
+        if not os.path.exists(move_path):
+            os.makedirs(move_path)
+        filename = os.path.splitext(img_path)[0]
+        for ext in extensions:
+            if os.path.exists(os.path.join(prefix_path, filename + ext)):  # 파일 존재 여부 확인
+                os.rename(os.path.join(prefix_path, filename + ext), os.path.join(move_path, filename + ext))
+
+        # frontalization 저장
+        save_path = os.path.join(prefix_path, 'front_' + plate_type)
+        gen_w, gen_h = generator.plate_wh[0], generator.plate_wh[1]
+        pt_src = np.float32([dst_xy[0][0], dst_xy[0][1], dst_xy[0][2]])
+        pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
+        mat_A = cv2.getAffineTransform(pt_src, pt_dst)
+        img_front = cv2.warpAffine(img, mat_A, [gen_w, gen_h])
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        imwrite_uni(os.path.join(save_path, 'front_' + img_path), img_front)
