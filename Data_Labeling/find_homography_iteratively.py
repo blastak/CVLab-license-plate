@@ -53,6 +53,16 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
         cr_y = int(generator.char_xywh[0][1] * 1) - 8
         cr_w = (generator.char_xywh[9][0] * 4 + generator.char_xywh[7][0]) * 1 + 20
         cr_h = generator.char_xywh[1][1] * 1 + generator.char_xywh[7][1] + 12 + 20
+    elif plate_type == 'P5':
+        cr_x = 22 - 10
+        cr_y = 14 - 10
+        cr_w = 296 + 20
+        cr_h = 142 + 20
+    elif plate_type == 'P6':
+        cr_x = 15 - 10
+        cr_y = 13 - 10
+        cr_w = 305 + 20
+        cr_h = 143 + 20
     mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
     mask_text_area[cr_y:cr_y + cr_h, cr_x:cr_x + cr_w] = 255
     return mask_text_area

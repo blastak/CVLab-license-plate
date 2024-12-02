@@ -233,16 +233,13 @@ if __name__ == '__main__':
             os.makedirs(move_path)
         filename = os.path.splitext(img_path)[0]
         for ext in extensions:
-            if os.path.exists(os.path.join(prefix_path, filename + ext)):  # 파일 존재 여부 확인
+            if os.path.exists(os.path.join(prefix_path, filename + ext)):
                 os.rename(os.path.join(prefix_path, filename + ext), os.path.join(move_path, filename + ext))
 
         # frontalization 저장
         save_path = os.path.join(prefix_path, 'front_' + plate_type)
-        gen_w, gen_h = generator.plate_wh[0], generator.plate_wh[1]
-        pt_src = np.float32([dst_xy[0][0], dst_xy[0][1], dst_xy[0][2]])
-        pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
-        mat_A = cv2.getAffineTransform(pt_src, pt_dst)
-        img_front = cv2.warpAffine(img, mat_A, [gen_w, gen_h])
+        dst_xy = Quadrilateral(dst_xy[0][0], dst_xy[0][1], dst_xy[0][2], dst_xy[0][3])
+        img_front, mat_A = frontalization(img, dst_xy, generator.plate_wh[0], generator.plate_wh[1])
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         imwrite_uni(os.path.join(save_path, 'front_' + img_path), img_front)
