@@ -68,16 +68,25 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
     return mask_text_area
 
 
-def frontalization(img_big, bb_or_qb, gen_w, gen_h):
-    if 'Quad' in str(bb_or_qb.__class__):
-        pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
+def frontalization(img_big, bb_or_qb, gen_w, gen_h, mode=3):
+    if mode == 3:
+        if 'Quad' in str(bb_or_qb.__class__):
+            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
+        else:
+            b = bb_or_qb
+            pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
+        pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
+        mat_T = cv2.getAffineTransform(pt_src, pt_dst)
+        img_front = cv2.warpAffine(img_big, mat_T, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
     else:
-        b = bb_or_qb
-        pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
-    pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
-    mat_A = cv2.getAffineTransform(pt_src, pt_dst)
-    img_front = cv2.warpAffine(img_big, mat_A, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
-    return img_front, mat_A
+        if 'Quad' in str(bb_or_qb.__class__):
+            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3, bb_or_qb.xy4])
+            pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h], [0, gen_h]])
+            mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
+            img_front = cv2.warpPerspective(img_big, mat_T, [gen_w, gen_h])
+        else:
+            raise NotImplementedError
+    return img_front, mat_T
 
 
 def find_homography_with_minimum_error(img_gen, mask_text_area, img_front, pt1, pt2):
