@@ -10,7 +10,7 @@ from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from Utils import imread_uni, imwrite_uni, trans_eng2kor_v1p3, save_json
+from Utils import imread_uni, save_json
 
 
 def generate_license_plate(generator, plate_type, plate_number):
@@ -112,6 +112,7 @@ def calculate_total_transformation(mat_A, mat_H):
     mat_T = mat_A_inv @ mat_H
     return mat_T
 
+
 def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
     print("1 or 2 or 3")
@@ -128,13 +129,13 @@ def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, im
     quad_xy = quad_xy[0].tolist()
     shapes = [
         dict(
-        label=plate_type+'_'+plate_number,
-        points=quad_xy,
-        group_id=None,
-        description='',
-        shape_type='polygon',
-        flags={},
-        mask=None
+            label=plate_type + '_' + plate_number,
+            points=quad_xy,
+            group_id=None,
+            description='',
+            shape_type='polygon',
+            flags={},
+            mask=None
         )
     ]
     save_json(path, shapes, imagePath, imageHeight, imageWidth)
@@ -179,7 +180,7 @@ if __name__ == '__main__':
             g_h, g_w = img_gened.shape[:2]
             mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
             cv2.imshow('mask_text_area', mask_text_area)
-            cv2.waitKey()
+            # cv2.waitKey()
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
             pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
@@ -207,7 +208,7 @@ if __name__ == '__main__':
 
         k = 0
         key_in = 0
-        name = ['XML Label','VIN_LPD','IWPOD_TF']
+        name = ['XML Label', 'VIN_LPD', 'IWPOD_TF']
         while True:
             for i, res in enumerate(img_results):
                 cv2.imshow(name[i], res[k])
