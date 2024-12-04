@@ -12,6 +12,8 @@ from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from Utils import imread_uni, save_json
 
+extensions = ['.jpg', '.png', '.xml', '.json']
+
 
 def generate_license_plate(generator, plate_type, plate_number):
     img_gen = generator.make_LP(plate_number, plate_type)
@@ -20,11 +22,15 @@ def generate_license_plate(generator, plate_type, plate_number):
     return img_gen
 
 
-def extract_N_track_features(img_gened, mask_text_area, img_front):
+def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
     img_gen_gray = cv2.cvtColor(img_gened, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_gen_gray = 255 - img_gen_gray
     pt_gen = cv2.goodFeaturesToTrack(img_gen_gray, 500, 0.01, 5, mask=mask_text_area)  # feature extraction
 
     img_front_gray = cv2.cvtColor(img_front, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_front_gray = 255 - img_front_gray
     img_front_gray_histeq = cv2.equalizeHist(img_front_gray)  # histogram equalization
     pt_tracked, status, err = cv2.calcOpticalFlowPyrLK(img_gen_gray, img_front_gray_histeq, pt_gen, None)  # feature tracking
 
@@ -192,7 +198,7 @@ if __name__ == '__main__':
             # cv2.waitKey()
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
-            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
+            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
             mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
             mat_T = calculate_total_transformation(mat_A, mat_H)
 
