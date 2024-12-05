@@ -1,5 +1,7 @@
 import json
 import os
+import re
+from datetime import datetime, timezone, timedelta
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 
@@ -339,3 +341,24 @@ def iou(bb1, bb2):
     o = wh / ((bb1[2] - bb1[0]) * (bb1[3] - bb1[1]) +
               (bb2[2] - bb2[0]) * (bb2[3] - bb2[1]) - wh)
     return o
+
+
+def plate_number_tokenizer(plate_number='서울12가3456'):
+    digits = re.findall('\\d+', plate_number)
+    koreans = re.findall('[가-힣]+', plate_number)
+    digit_2, digit_4 = digits
+    kor_mid = koreans.pop(-1)
+    kor_prov = ''.join(koreans)
+    return kor_prov, digit_2, kor_mid, digit_4
+
+
+KST = timezone(timedelta(hours=9))
+
+
+def get_pretty_datetime(add_ms=True, add_TZ=False):
+    retval = datetime.now(KST).strftime('%Y%m%d_%H%M%S')
+    if add_ms:
+        retval += datetime.now(KST).strftime('_%f')[:-3]
+    if add_TZ:
+        retval += datetime.now(KST).strftime('%z')
+    return retval

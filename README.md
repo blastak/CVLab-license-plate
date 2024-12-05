@@ -92,3 +92,15 @@ pip install numpy==1.22 matplotlib scipy
 ```bash
 pip install natsort
 ```
+
+### PyQt5
+
+```bash
+pip install PyQt5
+```
+
+### tqdm
+
+```bash
+pip install tqdm
+```
