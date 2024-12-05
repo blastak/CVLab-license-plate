@@ -98,3 +98,9 @@ pip install natsort
 ```bash
 pip install PyQt5
 ```
+
+### tqdm
+
+```bash
+pip install tqdm
+```
