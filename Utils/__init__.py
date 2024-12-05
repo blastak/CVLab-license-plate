@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from datetime import datetime, timezone, timedelta
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 
@@ -348,3 +349,15 @@ def plate_number_tokenizer(plate_number='서울12가3456'):
     kor_mid = koreans.pop(-1)
     kor_prov = ''.join(koreans)
     return kor_prov, digit_2, kor_mid, digit_4
+
+
+KST = timezone(timedelta(hours=9))
+
+
+def get_pretty_datetime(add_ms=True, add_TZ=False):
+    retval = datetime.now(KST).strftime('%Y%m%d_%H%M%S')
+    if add_ms:
+        retval += datetime.now(KST).strftime('_%f')[:-3]
+    if add_TZ:
+        retval += datetime.now(KST).strftime('%z')
+    return retval
