@@ -108,6 +108,7 @@ def imwrite_uni(filename, cv_img):
     :param cv_img: opencv(numpy) 이미지 배열
     :return: 없음
     """
+    cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
     im = Image.fromarray(cv_img)
     im.save(filename)
 
