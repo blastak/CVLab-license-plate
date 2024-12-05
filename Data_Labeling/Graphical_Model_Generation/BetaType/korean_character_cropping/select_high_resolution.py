@@ -1,6 +1,6 @@
 import os
 import shutil
-import hashlib
+
 from Utils import imread_uni
 from delete_hash import remove_duplicate_images
 
@@ -16,4 +16,3 @@ if __name__ == "__main__":
             shutil.copy(os.path.join(prefix_path, img_path), os.path.join(move_path, img_path))
 
     remove_duplicate_images(move_path)
-

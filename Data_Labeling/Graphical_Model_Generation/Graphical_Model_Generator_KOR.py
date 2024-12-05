@@ -20,11 +20,9 @@ class Graphical_Model_Generator_KOR:
         'P6': (335, 170),
     }
     LP_char_xywh = {
-        'P1-1': [(44, 13.5), (56, 83), (100, 13.5), (56, 83), (156, 13.5), (96, 83), (252, 13.5), (56, 83),
-                 # P1-1, P1-2
+        'P1-1': [(44, 13.5), (56, 83), (100, 13.5), (56, 83), (156, 13.5), (96, 83), (252, 13.5), (56, 83),  # P1-1, P1-2
                  (308, 13.5), (56, 83), (364, 13.5), (56, 83), (420, 13.5), (56, 83), ],
-        'P1-2': [(44, 13.5), (56, 83), (100, 13.5), (56, 83), (156, 13.5), (96, 83), (252, 13.5), (56, 83),
-                 # P1-1, P1-2
+        'P1-2': [(44, 13.5), (56, 83), (100, 13.5), (56, 83), (156, 13.5), (96, 83), (252, 13.5), (56, 83),  # P1-1, P1-2
                  (308, 13.5), (56, 83), (364, 13.5), (56, 83), (420, 13.5), (56, 83), ],
         'P1-3': [(30, 13.5), (55, 83), (85, 13.5), (55, 83), (140, 13.5), (55, 83), (195, 13.5), (75, 83),  # P1-3
                  (270, 13.5), (55, 83), (325, 13.5), (55, 83), (380, 13.5), (55, 83), (435, 13.5), (55, 83), ],
@@ -32,8 +30,7 @@ class Graphical_Model_Generator_KOR:
                  (300, 12.5), (50, 85), (350, 12.5), (50, 85), (400, 12.5), (50, 85), (450, 12.5), (50, 85), ],
         'P2': [(11, 60), (59, 105), (70, 60), (59, 105), (129, 60), (64, 105), (193, 60), (59, 105),  # P2
                (252, 60), (59, 105), (311, 60), (59, 105), (370, 60), (59, 105), ],
-        'P3': [(107, 11), (126, 61), (233, 11), (50, 61), (283, 11), (50, 61), (19, 84), (89, 116), (108, 84),
-               (78, 116),  # P3
+        'P3': [(107, 11), (126, 61), (233, 11), (50, 61), (283, 11), (50, 61), (19, 84), (89, 116), (108, 84), (78, 116),  # P3
                (186, 84), (78, 116), (264, 84), (78, 116), (342, 84), (78, 116), ],
         'P4': [(32, 13.5), (55, 83), (87, 13.5), (55, 83), (142, 13.5), (55, 83), (197, 13.5), (71, 83),  # P4
                (268, 13.5), (55, 83), (323, 13.5), (55, 83), (378, 13.5), (55, 83), (433, 13.5), (55, 83), ],
@@ -71,7 +68,7 @@ class Graphical_Model_Generator_KOR:
         fg_rgb = fg[:, :, :3]  # RGB 채널
         alpha = fg[:, :, 3]  # alpha 채널
 
-        bg[y:y + fh, x:x + fw, :3] = (alpha[:, :, np.newaxis] / 255.0 * fg_rgb + (1 - alpha[:, :, np.newaxis] / 255.0) * bg[y:y + fh,x:x + fw,:3]).astype(np.uint8)
+        bg[y:y + fh, x:x + fw, :3] = (alpha[:, :, np.newaxis] / 255.0 * fg_rgb + (1 - alpha[:, :, np.newaxis] / 255.0) * bg[y:y + fh, x:x + fw, :3]).astype(np.uint8)
 
     def make_LP(self, demand_str, LP_cls):
         base_path = os.path.join(self.base_path, LP_cls)
@@ -83,8 +80,7 @@ class Graphical_Model_Generator_KOR:
         self.plate_wh2 = tuple(x * 2 for x in self.plate_wh)
         self.char_xywh2 = [tuple(x * 2 for x in xywh) for xywh in self.char_xywh]
 
-        img_template = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + '/template/'), cv2.IMREAD_UNCHANGED),
-                                  self.plate_wh2)
+        img_template = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + '/template/'), cv2.IMREAD_UNCHANGED), self.plate_wh2)
 
         if self.LP_cls == 'P4':
             for i, ch in enumerate(demand_str):
@@ -98,8 +94,7 @@ class Graphical_Model_Generator_KOR:
                     if i == 0:
                         p = p[:-1] + f'{bd_eng2kor_v1p3.inverse[demand_str[1]]}/'
                         i += 1
-                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED),
-                                 self.char_xywh2[((i - 1) * 2) + 1])
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
 
         elif self.LP_cls == 'P3' or self.LP_cls == 'P5':
@@ -118,8 +113,7 @@ class Graphical_Model_Generator_KOR:
                     if i == 0:
                         p = p[:-1] + f'{bd_eng2kor_v1p3.inverse[demand_str[1]]}/'
                         i += 1
-                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED),
-                                 self.char_xywh2[((i - 1) * 2) + 1])
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
 
         elif self.LP_cls == 'P6':
@@ -131,8 +125,7 @@ class Graphical_Model_Generator_KOR:
                     p = '/korean/' + f'/{bd_eng2kor_v1p3.inverse[demand_str[i]]}/'
                 else:
                     p = '/number/' + f'/{demand_str[i]}/'
-                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED),
-                                 self.char_xywh2[(i * 2) + 1])
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[(i * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[(i * 2)])
 
         else:
@@ -142,8 +135,7 @@ class Graphical_Model_Generator_KOR:
                     p = '/number/' + f'/{ch}/'
                 else:  # korean
                     p = '/korean/' + f'/{bd_eng2kor_v1p3.inverse[ch]}/'
-                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED),
-                                 self.char_xywh2[(i * 2) + 1])
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[(i * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[(i * 2)])
 
         img_template = cv2.cvtColor(img_template, cv2.COLOR_BGRA2BGR)
@@ -201,6 +193,6 @@ if __name__ == '__main__':
     cv2.waitKey()
 
     LP_cls = 'P6'
-    img = generator.make_LP('11도1229', LP_cls)
+    img = generator.make_LP('12가3456', LP_cls)
     cv2.imshow('img', img)
     cv2.waitKey()
