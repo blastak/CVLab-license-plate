@@ -62,7 +62,6 @@ if __name__ == '__main__':
     args.save_dir = save_dir
     save_log(save_dir, get_pretty_datetime())
     save_log(save_dir, cvt_args2str(vars(args)))
-
     save_log(save_dir, '\n' + str(model) + '\n\n')
 
     ########## training process

@@ -19,7 +19,7 @@ def create_dataset(dataset_name, image_folder_path):
 
 
 def save_log(_path, s: str):
-    with open(os.path.join(_path, 'log.txt'), 'a', encoding='utf-8') as f:
+    with open(os.path.join(_path, '_log.txt'), 'a', encoding='utf-8') as f:
         if not s.endswith('\n'):
             s += '\n'
         f.write(s)
