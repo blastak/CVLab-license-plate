@@ -6,21 +6,50 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>1800</width>
     <height>600</height>
    </rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <property name="windowTitle">
+   <string>Video Player</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
    <item>
     <layout class="QHBoxLayout" name="videoLayout">
      <item>
-      <widget class="QGraphicsView" name="video1View"/>
+      <layout class="QVBoxLayout" name="video1Layout">
+       <item>
+        <widget class="QGraphicsView" name="video1View"/>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QGraphicsView" name="video2View"/>
+      <layout class="QVBoxLayout" name="video2Layout">
+       <item>
+        <widget class="QGraphicsView" name="video2View"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="editBox1">
+         <property name="placeholderText">
+          <string>입력 1</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QGraphicsView" name="video3View"/>
+      <layout class="QVBoxLayout" name="video3Layout">
+       <item>
+        <widget class="QGraphicsView" name="video3View"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="editBox2">
+         <property name="placeholderText">
+          <string>입력 2</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

@@ -12,8 +12,13 @@ class VideoPlayer(QtWidgets.QWidget):
         # QGraphicsScene 초기화
         self.video_scenes = [QGraphicsScene(self) for _ in range(3)]
         self.video_views = [self.video1View, self.video2View, self.video3View]
+
         for view, scene in zip(self.video_views, self.video_scenes):
             view.setScene(scene)
+            view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)  # 가로 스크롤바 제거
+            view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)    # 세로 스크롤바 제거
+            view.setBackgroundBrush(QtCore.Qt.black)  # 배경색 검정으로 설정
+            view.setFrameShape(QtWidgets.QFrame.NoFrame)  # 경계선 제거
 
         self.video_paths = [None, None, None]
         self.video_captures = [None, None, None]
@@ -24,6 +29,10 @@ class VideoPlayer(QtWidgets.QWidget):
 
         self.loadButton.clicked.connect(self.load_videos)
         self.playPauseButton.clicked.connect(self.play_pause_videos)
+
+        # 입력 필드의 텍스트 변경 시 타이틀 업데이트
+        self.editBox1.textChanged.connect(self.update_title)
+        self.editBox2.textChanged.connect(self.update_title)
 
     def load_videos(self):
         for i in range(3):
@@ -68,6 +77,12 @@ class VideoPlayer(QtWidgets.QWidget):
                     item.setPos((view_width - width * scale) / 2, (view_height - height * scale) / 2)
                 else:
                     capture.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 동영상 반복 재생
+
+    def update_title(self):
+        # editBox1과 editBox2의 입력을 합쳐 타이틀로 설정
+        text1 = self.editBox1.text()
+        text2 = self.editBox2.text()
+        self.setWindowTitle(f"{text1} {text2}")
 
     def closeEvent(self, event):
         self.timer.stop()
