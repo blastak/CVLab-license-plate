@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import cv2
@@ -6,11 +7,14 @@ import numpy as np
 from Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from LP_Detection import BBox, Quadrilateral
-from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner, cal_BB
+from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from Utils import imread_uni, save_json
+from Utils import imread_uni, save_json, imwrite_uni
+from find_homography_iteratively import frontalization
+
+extensions = ['.jpg', '.png', '.xml', '.json']
 
 
 def generate_license_plate(generator, plate_type, plate_number):
@@ -72,18 +76,6 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
     return mask_text_area
 
 
-def frontalization(img_big, bb_or_qb, gen_w, gen_h):
-    if 'Quad' in str(bb_or_qb.__class__):
-        pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
-    else:
-        b = bb_or_qb
-        pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
-    pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
-    mat_A = cv2.getAffineTransform(pt_src, pt_dst)
-    img_front = cv2.warpAffine(img_big, mat_A, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
-    return img_front, mat_A
-
-
 def find_homography_with_minimum_error(img_gen, mask_text_area, img_front, pt1, pt2):
     if len(pt1) < 4:
         return None
@@ -120,24 +112,12 @@ def calculate_total_transformation(mat_A, mat_H):
 def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
     quad_xy = dst_xy.tolist()
-    bb = cal_BB(quad_xy)
-    bb_xy = [[bb[0].x, bb[0].y], [bb[0].x + bb[0].w, bb[0].y + bb[0].h]]
     shape = dict(
         label=plate_type + '_' + plate_number,
         points=quad_xy[0],
         group_id=None,
         description='',
         shape_type='polygon',
-        flags={},
-        mask=None
-    )
-    shapes.append(shape)
-    shape = dict(
-        label=plate_type + '_' + plate_number,
-        points=bb_xy,
-        group_id=None,
-        description='',
-        shape_type='rectangle',
         flags={},
         mask=None
     )
@@ -158,14 +138,17 @@ def cal_IOU(b, p):
 
 
 if __name__ == '__main__':
-    prefix_path = r'./Dataset_Loader/sample_image_label/파클'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
+    opt = parser.parse_args()
+
+    prefix_path = opt.data
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
 
     loader = DatasetLoader_ParkingView(prefix_path)  # xml 읽을 준비
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
-    error_list = []
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
@@ -233,11 +216,24 @@ if __name__ == '__main__':
             i = 2
         else:
             i = 0
-            error_list.append(plate_number)
         dst_xy = dst_xy_list[i]
-        cv2.imshow("img", img_results[i][0])
-        cv2.waitKey(1)
+        # cv2.imshow("img", img_results[i][0])
+        # cv2.waitKey(1)
         save_quad(dst_xy, plate_type, plate_number, prefix_path, img_path, img.shape[0], img.shape[1])
-    with open("error_log.txt", "w", encoding="utf-8") as file:
-        for error in error_list:
-            file.write(error + "\n")
+
+        # type별 폴더 이동
+        move_path = os.path.join(prefix_path, plate_type)
+        if not os.path.exists(move_path):
+            os.makedirs(move_path)
+        filename = os.path.splitext(img_path)[0]
+        for ext in extensions:
+            if os.path.exists(os.path.join(prefix_path, filename + ext)):
+                os.rename(os.path.join(prefix_path, filename + ext), os.path.join(move_path, filename + ext))
+
+        # frontalization 저장
+        save_path = os.path.join(prefix_path, 'front_' + plate_type)
+        dst_xy = Quadrilateral(dst_xy[0][0], dst_xy[0][1], dst_xy[0][2], dst_xy[0][3])
+        img_front, mat_A = frontalization(img, dst_xy, generator.plate_wh[0], generator.plate_wh[1],4)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        imwrite_uni(os.path.join(save_path, 'front_' + img_path), img_front)

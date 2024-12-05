@@ -12,6 +12,8 @@ from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from Utils import imread_uni, save_json
 
+extensions = ['.jpg', '.png', '.xml', '.json']
+
 
 def generate_license_plate(generator, plate_type, plate_number):
     img_gen = generator.make_LP(plate_number, plate_type)
@@ -20,11 +22,15 @@ def generate_license_plate(generator, plate_type, plate_number):
     return img_gen
 
 
-def extract_N_track_features(img_gened, mask_text_area, img_front):
+def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
     img_gen_gray = cv2.cvtColor(img_gened, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_gen_gray = 255 - img_gen_gray
     pt_gen = cv2.goodFeaturesToTrack(img_gen_gray, 500, 0.01, 5, mask=mask_text_area)  # feature extraction
 
     img_front_gray = cv2.cvtColor(img_front, cv2.COLOR_BGR2GRAY)
+    if plate_type == 'P5' or plate_type == 'P6':
+        img_front_gray = 255 - img_front_gray
     img_front_gray_histeq = cv2.equalizeHist(img_front_gray)  # histogram equalization
     pt_tracked, status, err = cv2.calcOpticalFlowPyrLK(img_gen_gray, img_front_gray_histeq, pt_gen, None)  # feature tracking
 
@@ -53,21 +59,40 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
         cr_y = int(generator.char_xywh[0][1] * 1) - 8
         cr_w = (generator.char_xywh[9][0] * 4 + generator.char_xywh[7][0]) * 1 + 20
         cr_h = generator.char_xywh[1][1] * 1 + generator.char_xywh[7][1] + 12 + 20
+    elif plate_type == 'P5':
+        cr_x = 22 - 10
+        cr_y = 14 - 10
+        cr_w = 296 + 20
+        cr_h = 142 + 20
+    elif plate_type == 'P6':
+        cr_x = 15 - 10
+        cr_y = 13 - 10
+        cr_w = 305 + 20
+        cr_h = 143 + 20
     mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
     mask_text_area[cr_y:cr_y + cr_h, cr_x:cr_x + cr_w] = 255
     return mask_text_area
 
 
-def frontalization(img_big, bb_or_qb, gen_w, gen_h):
-    if 'Quad' in str(bb_or_qb.__class__):
-        pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
+def frontalization(img_big, bb_or_qb, gen_w, gen_h, mode=3):
+    if mode == 3:
+        if 'Quad' in str(bb_or_qb.__class__):
+            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
+        else:
+            b = bb_or_qb
+            pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
+        pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
+        mat_T = cv2.getAffineTransform(pt_src, pt_dst)
+        img_front = cv2.warpAffine(img_big, mat_T, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
     else:
-        b = bb_or_qb
-        pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
-    pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
-    mat_A = cv2.getAffineTransform(pt_src, pt_dst)
-    img_front = cv2.warpAffine(img_big, mat_A, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
-    return img_front, mat_A
+        if 'Quad' in str(bb_or_qb.__class__):
+            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3, bb_or_qb.xy4])
+            pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h], [0, gen_h]])
+            mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
+            img_front = cv2.warpPerspective(img_big, mat_T, [gen_w, gen_h])
+        else:
+            raise NotImplementedError
+    return img_front, mat_T
 
 
 def find_homography_with_minimum_error(img_gen, mask_text_area, img_front, pt1, pt2):
@@ -173,7 +198,7 @@ if __name__ == '__main__':
             # cv2.waitKey()
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
-            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front)
+            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
             mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
             mat_T = calculate_total_transformation(mat_A, mat_H)
 
