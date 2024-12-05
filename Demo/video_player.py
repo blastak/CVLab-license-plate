@@ -1,13 +1,16 @@
 import sys
+
+import cv2
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtWidgets import QFileDialog, QGraphicsScene
-import cv2
 
 
 class VideoPlayer(QtWidgets.QWidget):
     def __init__(self):
         super(VideoPlayer, self).__init__()
         uic.loadUi("video_player.ui", self)
+
+        self.center_window()
 
         # QGraphicsScene 초기화
         self.video_scenes = [QGraphicsScene(self) for _ in range(3)]
@@ -16,7 +19,7 @@ class VideoPlayer(QtWidgets.QWidget):
         for view, scene in zip(self.video_views, self.video_scenes):
             view.setScene(scene)
             view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)  # 가로 스크롤바 제거
-            view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)    # 세로 스크롤바 제거
+            view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)  # 세로 스크롤바 제거
             view.setBackgroundBrush(QtCore.Qt.black)  # 배경색 검정으로 설정
             view.setFrameShape(QtWidgets.QFrame.NoFrame)  # 경계선 제거
 
@@ -33,6 +36,19 @@ class VideoPlayer(QtWidgets.QWidget):
         # 입력 필드의 텍스트 변경 시 타이틀 업데이트
         self.editBox1.textChanged.connect(self.update_title)
         self.editBox2.textChanged.connect(self.update_title)
+
+    def center_window(self):
+        screen = QtWidgets.QApplication.primaryScreen()  # 기본 화면 가져오기
+        available_geometry = screen.availableGeometry()  # 작업 표시줄을 제외한 사용 가능한 영역
+        screen_width = available_geometry.width()
+        screen_height = available_geometry.height()
+        window_width = self.frameGeometry().width()
+        window_height = self.frameGeometry().height()
+
+        x = (screen_width - window_width) // 2 + available_geometry.x()
+        y = (screen_height - window_height) // 2 + available_geometry.y()
+
+        self.move(x, y)
 
     def load_videos(self):
         for i in range(3):
