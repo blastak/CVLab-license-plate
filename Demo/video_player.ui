@@ -14,43 +14,13 @@
    <item>
     <layout class="QHBoxLayout" name="videoLayout">
      <item>
-      <widget class="QLabel" name="video1">
-       <property name="minimumSize">
-        <size>
-         <width>250</width>
-         <height>250</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string>background-color: black;</string>
-       </property>
-      </widget>
+      <widget class="QGraphicsView" name="video1View"/>
      </item>
      <item>
-      <widget class="QLabel" name="video2">
-       <property name="minimumSize">
-        <size>
-         <width>250</width>
-         <height>250</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string>background-color: black;</string>
-       </property>
-      </widget>
+      <widget class="QGraphicsView" name="video2View"/>
      </item>
      <item>
-      <widget class="QLabel" name="video3">
-       <property name="minimumSize">
-        <size>
-         <width>250</width>
-         <height>250</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string>background-color: black;</string>
-       </property>
-      </widget>
+      <widget class="QGraphicsView" name="video3View"/>
      </item>
     </layout>
    </item>

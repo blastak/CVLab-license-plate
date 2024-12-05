@@ -1,6 +1,6 @@
 import sys
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QGraphicsScene
 import cv2
 
 
@@ -9,7 +9,12 @@ class VideoPlayer(QtWidgets.QWidget):
         super(VideoPlayer, self).__init__()
         uic.loadUi("video_player.ui", self)
 
-        self.video_widgets = [self.video1, self.video2, self.video3]
+        # QGraphicsScene 초기화
+        self.video_scenes = [QGraphicsScene(self) for _ in range(3)]
+        self.video_views = [self.video1View, self.video2View, self.video3View]
+        for view, scene in zip(self.video_views, self.video_scenes):
+            view.setScene(scene)
+
         self.video_paths = [None, None, None]
         self.video_captures = [None, None, None]
         self.timer = QtCore.QTimer()
@@ -38,16 +43,29 @@ class VideoPlayer(QtWidgets.QWidget):
         self.is_playing = not self.is_playing
 
     def update_frames(self):
-        for i, capture in enumerate(self.video_captures):
+        for i, (capture, scene) in enumerate(zip(self.video_captures, self.video_scenes)):
             if capture and capture.isOpened():
                 ret, frame = capture.read()
                 if ret:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     height, width, channel = frame.shape
-                    step = channel * width
-                    qimg = QtGui.QImage(frame.data, width, height, step, QtGui.QImage.Format_RGB888)
+                    qimg = QtGui.QImage(frame.data, width, height, channel * width, QtGui.QImage.Format_RGB888)
                     pixmap = QtGui.QPixmap.fromImage(qimg)
-                    self.video_widgets[i].setPixmap(pixmap)
+
+                    # QGraphicsScene에 Pixmap 추가
+                    scene.clear()
+                    item = scene.addPixmap(pixmap)
+
+                    # Aspect Ratio 유지하며 Stretch
+                    view_width = self.video_views[i].width()
+                    view_height = self.video_views[i].height()
+                    scale_x = view_width / width
+                    scale_y = view_height / height
+                    scale = min(scale_x, scale_y)
+                    item.setScale(scale)
+
+                    # View 중심에 Pixmap 배치
+                    item.setPos((view_width - width * scale) / 2, (view_height - height * scale) / 2)
                 else:
                     capture.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 동영상 반복 재생
 
