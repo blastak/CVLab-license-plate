@@ -1,3 +1,4 @@
+import argparse
 from Utils import imwrite_uni
 from find_homography_iteratively import *
 
@@ -31,7 +32,11 @@ def cal_IOU(b, p):
 
 
 if __name__ == '__main__':
-    prefix_path = r"D:\Dataset\LicensePlate\Dataset_reorganization\test"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
+    opt = parser.parse_args()
+
+    prefix_path = opt.data
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
 
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
@@ -47,21 +52,28 @@ if __name__ == '__main__':
 
         # VIN_LPD로 검출
         d_out = d_net.resize_N_forward(img)
-        for _, d in enumerate(d_out):
+        if d_out:
+            d = d_out[0]
             bb_vinlpd = BBox(d.x, d.y, d.w, d.h, class_str=d.class_str, class_idx=d.class_idx)
             boxes.append(bb_vinlpd)
 
         # iwpod_tf로 검출
         parallelograms = find_lp_corner(img, iwpod_tf)
-        for _, p in enumerate(parallelograms):
+        if parallelograms:
+            p = parallelograms[0]
             qb_iwpod = Quadrilateral(p[0], p[1], p[2], p[3])  # ex) p[0] : (342.353, 454.223)
             boxes.append(qb_iwpod)
 
-        # VIN_LPD와 iwpod_tf corner 비교
+        # IWPOD 존재 하지 않으면 VIN_LPD 사용
+        if not d_out and not parallelograms:
+            continue
         IOU = 0
-        if parallelograms:
-            IOU = cal_IOU(bb_vinlpd, parallelograms[0])
+        if d_out and parallelograms:
+            i = 1
+            IOU = cal_IOU(bb_vinlpd, p)
             print(IOU)
+        else:
+            i = 0
 
         img_results = []
         dst_xy_list = []
@@ -95,13 +107,7 @@ if __name__ == '__main__':
             img_results.append([img_superimposed, img])
             dst_xy_list.append(dst_xy)
         print(plate_number)
-        if not d_out and not parallelograms:
-            continue
-        # IWPOD 존재 하지 않으면 VIN_LPD 사용
-        if IOU > 0.2:
-            i = 1
-        else:
-            i = 0
+
         dst_xy = dst_xy_list[i]
         # cv2.imshow("img", img_results[i][0])
         # cv2.waitKey(1)

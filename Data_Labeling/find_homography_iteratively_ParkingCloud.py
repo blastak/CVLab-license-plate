@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import cv2
@@ -137,7 +138,11 @@ def cal_IOU(b, p):
 
 
 if __name__ == '__main__':
-    prefix_path = r'./Dataset_Loader/sample_image_label/파클'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
+    opt = parser.parse_args()
+
+    prefix_path = opt.data
     img_paths = [a for a in os.listdir(prefix_path) if a.endswith('.jpg')]
 
     loader = DatasetLoader_ParkingView(prefix_path)  # xml 읽을 준비
