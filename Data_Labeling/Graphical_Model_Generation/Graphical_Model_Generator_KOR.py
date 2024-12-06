@@ -43,15 +43,12 @@ class Graphical_Model_Generator_KOR:
                (15, 64), (65, 92), (95, 64), (65, 92), (175, 64), (65, 92), (255, 64), (65, 92), ],
     }
 
-    def __init__(self, base_path, LP_cls='P1-1'):
-        self.base_path = os.path.join(base_path)
-        self.plate_wh = Graphical_Model_Generator_KOR.LP_plate_wh.get(LP_cls)
-        self.char_xywh = Graphical_Model_Generator_KOR.LP_char_xywh.get(LP_cls)
-        self.LP_cls = LP_cls
-
-        # scaling
-        self.plate_wh2 = tuple(x * 2 for x in self.plate_wh)
-        self.char_xywh2 = [tuple(x * 2 for x in xywh) for xywh in self.char_xywh]
+    def __init__(self, base_path='BetaType/korean_LP/'):
+        self.base_path = os.path.join(os.path.dirname(__file__), base_path)
+        self.plate_wh = None
+        self.char_xywh = None
+        self.plate_wh2 = None
+        self.char_xywh2 = None
 
     def absoluteFilePaths(self, directory):
         retval = []
@@ -71,13 +68,12 @@ class Graphical_Model_Generator_KOR:
         fg_rgb = fg[:, :, :3]  # RGB 채널
         alpha = fg[:, :, 3]  # alpha 채널
 
-        bg[y:y + fh, x:x + fw, :3] = (alpha[:, :, np.newaxis] / 255.0 * fg_rgb + (1 - alpha[:, :, np.newaxis] / 255.0) * bg[y:y + fh,x:x + fw,:3]).astype(np.uint8)
+        bg[y:y + fh, x:x + fw, :3] = (alpha[:, :, np.newaxis] / 255.0 * fg_rgb + (1 - alpha[:, :, np.newaxis] / 255.0) * bg[y:y + fh, x:x + fw, :3]).astype(np.uint8)
 
     def make_LP(self, demand_str, LP_cls):
         base_path = os.path.join(self.base_path, LP_cls)
         self.plate_wh = Graphical_Model_Generator_KOR.LP_plate_wh.get(LP_cls)
         self.char_xywh = Graphical_Model_Generator_KOR.LP_char_xywh.get(LP_cls)
-        self.LP_cls = LP_cls
 
         # scaling
         self.plate_wh2 = tuple(x * 2 for x in self.plate_wh)
@@ -86,11 +82,11 @@ class Graphical_Model_Generator_KOR:
         img_template = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + '/template/'), cv2.IMREAD_UNCHANGED),
                                   self.plate_wh2)
 
-        if self.LP_cls == 'P4':
+        p = ''
+        if LP_cls == 'P4':
             for i, ch in enumerate(demand_str):
                 if i == 1:
                     continue
-                p = ''
                 if ch.isdigit():  # number
                     p = '/number/' + f'/{ch}/'
                 else:  # korean
@@ -102,11 +98,10 @@ class Graphical_Model_Generator_KOR:
                                  self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
 
-        elif self.LP_cls == 'P3' or self.LP_cls == 'P5':
+        elif LP_cls == 'P3' or LP_cls == 'P5':
             for i, ch in enumerate(demand_str):
                 if i == 1:
                     continue
-                p = ''
                 if ch.isdigit():  # number
                     if i == 2 or i == 3:  # 윗자리 숫자 예외처리
                         p = '/number/' + f'/{ch}_1/'
@@ -122,8 +117,7 @@ class Graphical_Model_Generator_KOR:
                                  self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
 
-        elif self.LP_cls == 'P6':
-            p = ''
+        elif LP_cls == 'P6':
             for i in range(7):
                 if i == 0 or i == 1:
                     p = '/number/' + f'/{demand_str[i]}_1/'
@@ -137,7 +131,6 @@ class Graphical_Model_Generator_KOR:
 
         else:
             for i, ch in enumerate(demand_str):
-                p = ''
                 if ch.isdigit():  # number
                     p = '/number/' + f'/{ch}/'
                 else:  # korean
@@ -160,7 +153,7 @@ class Graphical_Model_Generator_KOR:
 
 if __name__ == '__main__':
     LP_cls = 'P1-1'
-    generator = Graphical_Model_Generator_KOR('./BetaType/korean_LP/')
+    generator = Graphical_Model_Generator_KOR()
     img = generator.make_LP('12가3456', LP_cls)
     cv2.imshow('img', img)
     cv2.waitKey()

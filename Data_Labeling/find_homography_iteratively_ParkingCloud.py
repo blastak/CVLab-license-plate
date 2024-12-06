@@ -150,6 +150,7 @@ if __name__ == '__main__':
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
+    generator = Graphical_Model_Generator_KOR()
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
         i_h, i_w = img.shape[:2]
@@ -180,7 +181,6 @@ if __name__ == '__main__':
 
         img_results = []
         dst_xy_list = []
-        generator = Graphical_Model_Generator_KOR('./Graphical_Model_Generation/BetaType/korean_LP')  # 반복문 안에서 객체 생성 시 오버헤드가 발생
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
             g_h, g_w = img_gened.shape[:2]
