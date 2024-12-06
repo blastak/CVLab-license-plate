@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
             for b in r_out:
                 cv2.rectangle(padded_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
-            list_char, _ = r_net.check_align(r_out, int(folder_name[-1]))
+            list_char = r_net.check_align(r_out, int(folder_name[-1]))
             list_char_kr = trans_eng2kor_v1p3(list_char)
             print(''.join(list_char_kr))
 
