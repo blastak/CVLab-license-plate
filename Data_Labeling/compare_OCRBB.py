@@ -53,17 +53,27 @@ if __name__ == '__main__':
             padded_img[offset_y:offset_y + height, offset_x:offset_x + width] = img
 
             r_out = r_net.resize_N_forward(padded_img)
-            if len(r_out) < 3:
-                continue
-            list_char, box = r_net.check_align(r_out, int(folder_name[-1]))
-            list_char_kr = trans_eng2kor_v1p3(list_char)
-            print(''.join(list_char_kr))
 
             # Bounding Box visualize
-            for i, b in enumerate(box):
+            for i, b in enumerate(r_out):
                 cv2.rectangle(padded_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
             for i in range(len(char_xywh) // 2):
                 cv2.rectangle(padded_img, (int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])), (255, 255, 255), 1)
+            cv2.imshow("Padded Image", padded_img)
+            cv2.waitKey()
+
+            if len(r_out) < 3:
+                continue
+
+            # bounding_box 중심점
+            bbox_centers = []
+            for i, b in enumerate(r_out):
+                center = calculate_center([b.x, b.y, b.w, b.h])
+                bbox_centers.append(center)
+
+            list_char = r_net.check_align(r_out, int(folder_name[-1]))
+            list_char_kr = trans_eng2kor_v1p3(list_char)
+            print(''.join(list_char_kr))
 
             threshold = 20
 
@@ -79,12 +89,7 @@ if __name__ == '__main__':
                 ref_center = calculate_center([int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])])
                 reference_points.append(ref_center)
 
-            # bounding_box 중심점
-            bbox_centers = []
-            for i, b in enumerate(box):
-                center = calculate_center([b.x, b.y, b.w, b.h])
-                bbox_centers.append(center)
-
+            # Hungarian Algorithm
             cost_matrix = np.zeros((len(reference_points), len(bbox_centers)))
             for i, ref_point in enumerate(reference_points):
                 for j, bbox_point in enumerate(bbox_centers):
@@ -105,4 +110,4 @@ if __name__ == '__main__':
                 os.rename(os.path.join(folder_path, img_path), os.path.join(save_path, img_path))
 
             cv2.imshow("Padded Image", padded_img)
-            cv2.waitKey(0)
+            cv2.waitKey()
