@@ -1,18 +1,20 @@
+from collections import Counter
+
 import cv2
 import numpy as np
 
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from MultiObjectTracker import Track, Tracker
-from Utils import trans_eng2kor_v1p3
+from Utils import trans_eng2kor_v1p3, add_text_with_background
 from Utils import xywh2xyxy, cxcywh2xywh, cxcysfar2cxcywh, cxcywh2cxcysfar, xywh2cxcywh, xyxy2xywh
-from collections import Counter
+
 
 class TrackWithPlateNumber(Track):
     def __init__(self, cx, cy, sf, ar, p_type, p_number):
         super().__init__(cx, cy, sf, ar)
         self.plate_types = Counter({p_type: 1})
-        self.plate_numbers = [p_number]
+        self.plate_numbers = Counter({p_number: 1})
         self.voted_type = ''
         self.voted_number = ''
 
@@ -21,15 +23,15 @@ class TrackWithPlateNumber(Track):
         self.last_xyxy = xywh2xyxy(cxcywh2xywh(cxcysfar2cxcywh(x[:4])))
 
         self.plate_types[p_type] += 1
-        self.plate_numbers.append(p_number)
+        self.plate_numbers[p_number] += 1
+
         self.vote()
 
         return self.last_xyxy
 
     def vote(self):
-        print(self.plate_types.most_common())
-        print(self.plate_types.most_common()[0][0])
-        pass
+        self.voted_type = self.plate_types.most_common()[0][0]
+        self.voted_number = self.plate_numbers.most_common()[0][0]
 
 
 class TrackerWithVoting(Tracker):
@@ -65,13 +67,12 @@ class TrackerWithVoting(Tracker):
 if __name__ == '__main__':
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
-    # cap = cv2.VideoCapture('./sample_video/sample1.avi')
-    cap = cv2.VideoCapture(r"D:\Dataset\01_LicensePlate\08_Inha_Entrance_\20181129_084819_합본.avi")
+    cap = cv2.VideoCapture('./sample_video/sample1.avi')
 
     myTracker = TrackerWithVoting()
 
     cnt_continue = 0
-    cnt_frame = 5700
+    cnt_frame = 0
     delay = 0
     cap.set(cv2.CAP_PROP_POS_FRAMES, cnt_frame)
     while cap.isOpened():
@@ -119,6 +120,9 @@ if __name__ == '__main__':
                 traj = list(map(int, traj))
                 cv2.rectangle(img_disp, traj[:2], traj[2:], color=trk.color, thickness=2)
                 cv2.circle(img_disp, ((traj[0] + traj[2]) // 2, (traj[1] + traj[3]) // 2), 2, trk.color, 3)
+            w = trk.last_xyxy[2] - trk.last_xyxy[0]
+            font_size = max(1, w // 5)
+            img_disp = add_text_with_background(img_disp, '(%s)%s'%(trk.voted_type,trk.voted_number),position=(trk.last_xyxy[0], trk.last_xyxy[1] - font_size), font_size=font_size, padding=0).astype(np.uint8)
         cv2.putText(img_disp, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
         cv2.imshow('img_disp', img_disp)
 
