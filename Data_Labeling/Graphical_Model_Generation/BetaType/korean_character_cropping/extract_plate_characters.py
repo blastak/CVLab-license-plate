@@ -190,7 +190,7 @@ if __name__ == "__main__":
             crop_resized_img = r_net.crop_resize_with_padding(img, bb)  # 글자 인식
             r_out = r_net.resize_N_forward(crop_resized_img)
             bb.class_idx = 4
-            list_char, _ = r_net.check_align(r_out, bb.class_idx + 1)
+            list_char = r_net.check_align(r_out, bb.class_idx + 1)
             list_char_kr = trans_eng2kor_v1p3(list_char)
             label = ''.join(list_char_kr)
             print(label)

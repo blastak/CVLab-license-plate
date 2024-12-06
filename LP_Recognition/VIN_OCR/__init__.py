@@ -53,8 +53,8 @@ class VinOCR(OcvYoloBase):
 
     def check_align(self, _boxes, _p_type):
         self.check_border(_boxes)  # 오검출 제거
-        list_char, _boxes = self.align_char_box(_boxes, _p_type)  # 결과 정렬
-        return list_char, _boxes
+        list_char = self.align_char_box(_boxes, _p_type)  # 결과 정렬
+        return list_char
 
     def check_border(self, _boxes):
         if len(_boxes) < 4:
@@ -89,7 +89,7 @@ class VinOCR(OcvYoloBase):
     def align_char_box(self, _boxes, _p_type):
         retval = []
         if _p_type == 1 or _p_type == 2 or _p_type == 4 or _p_type == 10 or _p_type == 12:
-            if len(_boxes) <= 2: return retval, _boxes
+            if len(_boxes) <= 2: return retval
             _boxes = sorted(_boxes, key=lambda b: b.x)
 
             if _p_type == 4 or _p_type == 10 or _p_type == 12:  # 지역문자 특수 처리
@@ -139,7 +139,7 @@ class VinOCR(OcvYoloBase):
             for b in _boxes:
                 retval.append(b.class_str)
 
-        return retval, _boxes
+        return retval
 
 
 def load_model_VinOCR(path_base):
@@ -179,7 +179,7 @@ if __name__ == '__main__':
             char = bd_eng2kor_v1p3[b.class_str] if not b.class_str.isdigit() else b.class_str
             crop_resized_img = add_text_with_background(crop_resized_img, char, position=(b.x, b.y - font_size), font_size=font_size, padding=0).astype(np.uint8)
             print(char, end='')
-        list_char, _ = r_net.check_align(r_out, bb.class_idx + 1)
+        list_char = r_net.check_align(r_out, bb.class_idx + 1)
         list_char_kr = trans_eng2kor_v1p3(list_char)
         print(' -->', ''.join(list_char_kr))
         cv2.imshow(''.join(list_char), crop_resized_img)
