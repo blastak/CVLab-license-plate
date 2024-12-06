@@ -67,18 +67,25 @@ class TrackerWithVoting(Tracker):
 if __name__ == '__main__':
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
-    cap = cv2.VideoCapture('./sample_video/sample1.avi')
-    # cap = cv2.VideoCapture(r"D:\Dataset\01_LicensePlate\08_Inha_Entrance_\20181129_084819_합본.avi")
+    # cap = cv2.VideoCapture('./sample_video/sample1.avi')
+    cap = cv2.VideoCapture(r"D:\Dataset\01_LicensePlate\08_Inha_Entrance_\20181129_084819_합본.avi")
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    video_writer = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'XVID'), fps, (video_width, video_height))
 
     myTracker = TrackerWithVoting()
 
     cnt_continue = 0
-    cnt_frame = 0
+    cnt_frame = 5700
     delay = 0
     cap.set(cv2.CAP_PROP_POS_FRAMES, cnt_frame)
     while cap.isOpened():
         is_grabbed = cap.grab()
         cnt_frame += 1
+        if cnt_frame == 7400: break#8500: break
         if not is_grabbed:
             cnt_continue += 1
             if cnt_continue > 3:
@@ -126,6 +133,8 @@ if __name__ == '__main__':
             img_disp = add_text_with_background(img_disp, '(%s)%s'%(trk.voted_type,trk.voted_number),position=(trk.last_xyxy[0], trk.last_xyxy[1] - font_size), font_size=font_size, padding=0).astype(np.uint8)
         cv2.putText(img_disp, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
         cv2.imshow('img_disp', img_disp)
+
+        video_writer.write(img_disp)
 
         key_in = cv2.waitKey(delay)
         if key_in == 27:
