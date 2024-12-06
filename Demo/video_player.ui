@@ -21,6 +21,22 @@
        <item>
         <widget class="QGraphicsView" name="video1View"/>
        </item>
+       <item>
+        <widget class="QLineEdit" name="editBox0">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Input image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="readOnly">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
@@ -31,7 +47,7 @@
        <item>
         <widget class="QLineEdit" name="editBox1">
          <property name="placeholderText">
-          <string>입력 1</string>
+          <string>password1</string>
          </property>
         </widget>
        </item>
@@ -45,7 +61,7 @@
        <item>
         <widget class="QLineEdit" name="editBox2">
          <property name="placeholderText">
-          <string>입력 2</string>
+          <string>password2</string>
          </property>
         </widget>
        </item>

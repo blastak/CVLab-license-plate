@@ -96,7 +96,7 @@ pip install natsort
 ### PyQt5
 
 ```bash
-pip install PyQt5
+pip install pyqt5 pyqt5-tools
 ```
 
 ### tqdm
