@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 
 import cv2
 import numpy as np
@@ -55,12 +56,12 @@ if __name__ == '__main__':
             r_out = r_net.resize_N_forward(padded_img)
 
             # Bounding Box visualize
-            for i, b in enumerate(r_out):
-                cv2.rectangle(padded_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
-            for i in range(len(char_xywh) // 2):
-                cv2.rectangle(padded_img, (int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])), (255, 255, 255), 1)
-            cv2.imshow("Padded Image", padded_img)
-            cv2.waitKey()
+            # for i, b in enumerate(r_out):
+            #     cv2.rectangle(padded_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
+            # for i in range(len(char_xywh) // 2):
+            #     cv2.rectangle(padded_img, (int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])), (255, 255, 255), 1)
+            # cv2.imshow("Padded Image", padded_img)
+            # cv2.waitKey()
 
             if len(r_out) < 3:
                 continue
@@ -74,8 +75,6 @@ if __name__ == '__main__':
             list_char = r_net.check_align(r_out, int(folder_name[-1]))
             list_char_kr = trans_eng2kor_v1p3(list_char)
             print(''.join(list_char_kr))
-
-            threshold = 20
 
             # 숫자 기준점
             reference_points = []
@@ -95,19 +94,32 @@ if __name__ == '__main__':
                 for j, bbox_point in enumerate(bbox_centers):
                     cost_matrix[i, j] = np.linalg.norm(ref_point - bbox_point)
             row_ind, col_ind = linear_sum_assignment(cost_matrix)
-            print(row_ind, col_ind)
+            # print(row_ind, col_ind)
             offset_sum = 0
             for r, c in zip(row_ind, col_ind):
-                print(f"Reference Point {r} is matched with Bounding Box {c}")
-                print(f"Distance: {cost_matrix[r, c]:.2f}")
                 offset_sum += cost_matrix[r, c]
-            print(offset_sum)
+            #     print(f"Reference Point {r} is matched with Bounding Box {c}")
+            #     print(f"Distance: {cost_matrix[r, c]:.2f}")
+            # print(offset_sum)
+
+            threshold = 21
+            if plate_type == 'P2':
+                threshold = 18
+            elif plate_type == 'P1-3':
+                threshold = 24
+            elif plate_type == 'P1-4':
+                threshold = 26
             if offset_sum <= threshold:
                 print('correct')
-                save_path = os.path.join(prefix_path, f'good_{plate_type}_Hungarian{threshold}')
+                move_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}_Front_H{threshold}')
+                save_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}')
+                if not os.path.exists(move_path):
+                    os.makedirs(move_path)
                 if not os.path.exists(save_path):
                     os.makedirs(save_path)
-                os.rename(os.path.join(folder_path, img_path), os.path.join(save_path, img_path))
+                os.rename(os.path.join(folder_path, img_path), os.path.join(move_path, img_path))
+                os.rename(os.path.join(prefix_path, plate_type, img_path[6:]), os.path.join(save_path, img_path[6:]))
+                os.rename(os.path.join(prefix_path, plate_type, img_path[6:-4] + '.json'), os.path.join(save_path, img_path[6:-4] + '.json'))
 
-            cv2.imshow("Padded Image", padded_img)
-            cv2.waitKey()
+            # cv2.imshow("Padded Image", padded_img)
+            # cv2.waitKey()
