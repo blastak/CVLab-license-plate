@@ -85,7 +85,6 @@ class VideoPlayer(QtWidgets.QWidget):
         self.is_playing = not self.is_playing
 
     def t_update_frames(self):
-        imgs = {}
         if self.video_capture and self.video_capture.isOpened():
             ret, frame = self.video_capture.read()
             if ret:
@@ -114,6 +113,7 @@ class VideoPlayer(QtWidgets.QWidget):
 
                 # voting 결과로 GraphicalModel 만들고 Homography 계산
                 mat_Ts = []
+                img_geneds = []
                 for trk in self.tracker.tracks:
                     if trk.last_xyxy[0] < 0 or trk.last_xyxy[1] < 0 or trk.last_xyxy[2] >= frame.shape[1] or trk.last_xyxy[3] >= frame.shape[0]:
                         continue
@@ -131,6 +131,11 @@ class VideoPlayer(QtWidgets.QWidget):
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
 
+                    mat_Ts.append(mat_T)
+                    img_geneds.append(img_gened)
+
+                img_cond1 = frame.copy()
+                for mat_T, img_gened in zip(mat_Ts, img_geneds):
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
 
@@ -139,21 +144,20 @@ class VideoPlayer(QtWidgets.QWidget):
                     mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
 
                     # 영상 합성
-                    img1 = cv2.bitwise_and(frame, frame, mask=cv2.bitwise_not(mask_white))
+                    img1 = cv2.bitwise_and(img_cond1, img_cond1, mask=cv2.bitwise_not(mask_white))
                     img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
-                    img_superimposed = img1 + img2
-                    cv2.imshow('img_superimposed',img_superimposed)
-                    cv2.waitKey(1)
+                    img_cond1 = img1 + img2
+                cv2.imshow('img_cond1',img_cond1)
+                cv2.waitKey(1)
 
-                    # # 좌표 계산
-                    # g_h, g_w = img_gened.shape[:2]
-                    # dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
-                    # cv2.polylines(img_superimposed, [np.int32(dst_xy)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+                # # 좌표 계산
+                # g_h, g_w = img_gened.shape[:2]
+                # dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
+                # cv2.polylines(img_superimposed, [np.int32(dst_xy)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
 
-                    # img_results.append([img_superimposed, img])
-                    # dst_xy_list.append(dst_xy)
+                # img_results.append([img_superimposed, img])
+                # dst_xy_list.append(dst_xy)
 
-                imgs['orig'] = frame
                 for i, scene in enumerate(self.video_scenes):
                     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
