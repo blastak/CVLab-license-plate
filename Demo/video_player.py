@@ -1,3 +1,4 @@
+import random
 import sys
 
 import cv2
@@ -11,7 +12,7 @@ from LP_Detection import BBox
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
-from Utils import trans_eng2kor_v1p3
+from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer
 from Utils import xywh2xyxy, xyxy2xywh
 
 
@@ -84,6 +85,34 @@ class VideoPlayer(QtWidgets.QWidget):
             self.timer.start(30)  # 약 30 FPS
         self.is_playing = not self.is_playing
 
+    def encrypt_number(self, p_type, p_number, password, reverse=False):
+        if password == '':
+            return p_number
+
+        random.seed(password)
+        adder = random.randint(1, 999999)
+        if reverse:
+            adder = -adder
+
+        tokens = plate_number_tokenizer(p_number)
+        new_tokens = []
+        if p_type in ['P3', 'P4', 'P5']:
+            i0 = kor_complete_form[p_type + 'prov'].index(tokens[0])
+            j0 = (i0 + adder) % len(kor_complete_form[p_type + 'prov'])
+            new_tokens.append(kor_complete_form[p_type + 'prov'][j0])
+        for ch in ''.join(tokens[1:]):
+            if ch.isdigit():
+                i0 = int(ch)
+                j0 = (i0 + adder) % 10
+                new_tokens.append(str(j0))
+            else:
+                i0 = kor_complete_form[p_type].index(ch)
+                j0 = (i0 + adder) % len(kor_complete_form[p_type])
+                new_tokens.append(kor_complete_form[p_type][j0])
+
+        new_number = ''.join(new_tokens)
+        return new_number
+
     def t_update_frames(self):
         if self.video_capture and self.video_capture.isOpened():
             ret, frame = self.video_capture.read()
@@ -113,7 +142,8 @@ class VideoPlayer(QtWidgets.QWidget):
 
                 # voting 결과로 GraphicalModel 만들고 Homography 계산
                 mat_Ts = []
-                img_geneds = []
+                types_numbers = []
+                dst_xys = []
                 for trk in self.tracker.tracks:
                     if trk.last_xyxy[0] < 0 or trk.last_xyxy[1] < 0 or trk.last_xyxy[2] >= frame.shape[1] or trk.last_xyxy[3] >= frame.shape[0]:
                         continue
@@ -121,21 +151,28 @@ class VideoPlayer(QtWidgets.QWidget):
                     p_type = trk.voted_type
                     p_number = trk.voted_number
 
-                    if p_type == 'P1':
-                        p_type += '-1'
-
                     try:
-                        img_gen0 = self.gm_generator.make_LP(p_number, p_type)
+                        p_type_temp = 'P1-1' if p_type == 'P1' else p_type
+                        img_gen0 = self.gm_generator.make_LP(p_number, p_type_temp)
                     except:
                         continue
+                    types_numbers.append((p_type, p_number))  # 암호화를 위해 저장
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
+                    mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
-                    mat_Ts.append(mat_T)
-                    img_geneds.append(img_gened)
+                    # 꼭지점 좌표 계산
+                    g_h, g_w = img_gened.shape[:2]
+                    dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
+                    dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
 
                 img_cond1 = frame.copy()
-                for mat_T, img_gened in zip(mat_Ts, img_geneds):
+                for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers):
+                    new_number = self.encrypt_number(p_type, p_number, self.password1)
+
+                    p_type_temp = 'P1-1' if p_type == 'P1' else p_type
+                    img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
+                    img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
 
@@ -147,7 +184,7 @@ class VideoPlayer(QtWidgets.QWidget):
                     img1 = cv2.bitwise_and(img_cond1, img_cond1, mask=cv2.bitwise_not(mask_white))
                     img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
                     img_cond1 = img1 + img2
-                cv2.imshow('img_cond1',img_cond1)
+                cv2.imshow('img_cond1', img_cond1)
                 cv2.waitKey(1)
 
                 # # 좌표 계산
