@@ -98,7 +98,7 @@ class VideoPlayer(QtWidgets.QWidget):
                 for _, d in enumerate(d_out):
                     img_crop = self.r_net.crop_resize_with_padding(frame, d)
                     r_out = self.r_net.resize_N_forward(img_crop)
-                    list_char, _ = self.r_net.check_align(r_out, d.class_idx + 1)
+                    list_char = self.r_net.check_align(r_out, d.class_idx + 1)
                     list_char_kr = trans_eng2kor_v1p3(list_char)
                     label = ''.join(list_char_kr)
 

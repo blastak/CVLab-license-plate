@@ -103,7 +103,7 @@ if __name__ == '__main__':
             # recognition
             img_crop = r_net.crop_resize_with_padding(img_orig, d)
             r_out = r_net.resize_N_forward(img_crop)
-            list_char, _ = r_net.check_align(r_out, d.class_idx + 1)
+            list_char = r_net.check_align(r_out, d.class_idx + 1)
             list_char_kr = trans_eng2kor_v1p3(list_char)
             label = ''.join(list_char_kr)
 
@@ -122,7 +122,7 @@ if __name__ == '__main__':
                 cv2.circle(img_disp, ((traj[0] + traj[2]) // 2, (traj[1] + traj[3]) // 2), 2, trk.color, 3)
             w = trk.last_xyxy[2] - trk.last_xyxy[0]
             font_size = max(1, w // 5)
-            img_disp = add_text_with_background(img_disp, '(%s)%s'%(trk.voted_type,trk.voted_number),position=(trk.last_xyxy[0], trk.last_xyxy[1] - font_size), font_size=font_size, padding=0).astype(np.uint8)
+            img_disp = add_text_with_background(img_disp, '(%s)%s' % (trk.voted_type, trk.voted_number), position=(trk.last_xyxy[0], trk.last_xyxy[1] - font_size), font_size=font_size, padding=0).astype(np.uint8)
         cv2.putText(img_disp, f'{cnt_frame}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 3, cv2.LINE_AA)
         cv2.imshow('img_disp', img_disp)
 
