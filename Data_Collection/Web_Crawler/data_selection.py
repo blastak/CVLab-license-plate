@@ -44,7 +44,7 @@ if __name__ == '__main__':
                 #     font_size = b.w  # magic number
                 #     char = bd_eng2kor_v1p3[b.class_str] if not b.class_str.isdigit() else b.class_str
                 #     crop_resized_img = add_text_with_background(crop_resized_img, char, position=(b.x, b.y - font_size), font_size=font_size, padding=0).astype(np.uint8)
-                list_char_en, _ = r_net.check_align(r_out, bb.class_idx + 1)
+                list_char_en = r_net.check_align(r_out, bb.class_idx + 1)
                 list_char_kr = trans_eng2kor_v1p3(list_char_en)
 
                 total_string = ''.join(list_char_kr)

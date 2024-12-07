@@ -10,18 +10,17 @@ if __name__ == "__main__":
     save_path = f'./03_patch/{plate}'
     os.makedirs(save_path, exist_ok=True)
     ############# 1
-    i = 1
-    img_crop_1 = cv2.imread(f'./02_crop/{plate}/_1/{i}_1.png', cv2.IMREAD_UNCHANGED)
-    img_crop = cv2.imread(f'./02_crop/{plate}/{i}.png', cv2.IMREAD_UNCHANGED)
+    img_crop_1 = cv2.imread(f'./02_crop/{plate}/_1/1_1.png', cv2.IMREAD_UNCHANGED)
+    img_crop = cv2.imread(f'./02_crop/{plate}/1.png', cv2.IMREAD_UNCHANGED)
     img_bg_1 = np.full([177, 132, 4], 0, dtype=np.uint8)  # _1 숫자 패치 사이즈
-    img_bg = np.full([185, 92, 4], 0, dtype=np.uint8)  # 숫자 패치 사이즈
+    img_bg = np.full([395, 197, 4], 0, dtype=np.uint8)  # 숫자 패치 사이즈
     offset_x_1 = 50
-    offset_x = 37
+    offset_x = 74
     offset_y = 0
     img_bg_1[offset_y:offset_y + img_crop_1.shape[0], offset_x_1:offset_x_1 + img_crop_1.shape[1]] = img_crop_1
     img_bg[offset_y:offset_y + img_crop.shape[0], offset_x:offset_x + img_crop.shape[1]] = img_crop
-    cv2.imwrite(f'{save_path}/{i}_1.png', img_bg_1)
-    cv2.imwrite(f'{save_path}/{i}.png', img_bg)
+    cv2.imwrite(f'{save_path}/1_1.png', img_bg_1)
+    cv2.imwrite(f'{save_path}/1.png', img_bg)
 
 
     ############# 0~9
