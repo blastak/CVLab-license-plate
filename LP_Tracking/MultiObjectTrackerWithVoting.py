@@ -5,7 +5,7 @@ import numpy as np
 
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from MultiObjectTracker import Track, Tracker
+from LP_Tracking.MultiObjectTracker import Track, Tracker
 from Utils import trans_eng2kor_v1p3, add_text_with_background
 from Utils import xywh2xyxy, cxcywh2xywh, cxcysfar2cxcywh, cxcywh2cxcysfar, xywh2cxcywh, xyxy2xywh
 
@@ -15,8 +15,8 @@ class TrackWithPlateNumber(Track):
         super().__init__(cx, cy, sf, ar)
         self.plate_types = Counter({p_type: 1})
         self.plate_numbers = Counter({p_number: 1})
-        self.voted_type = ''
-        self.voted_number = ''
+        self.voted_type = p_type
+        self.voted_number = p_number
 
     def correct2(self, z, p_type, p_number):
         x = self.kf.correct(z)

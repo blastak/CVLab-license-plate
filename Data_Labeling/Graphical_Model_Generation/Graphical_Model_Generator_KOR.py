@@ -103,18 +103,18 @@ class Graphical_Model_Generator_KOR:
                 if i == 1:
                     continue
                 if ch.isdigit():  # number
+                    p = f'/number/{ch}'
                     if i == 2 or i == 3:  # 윗자리 숫자 예외처리
-                        p = '/number/' + f'/{ch}_1/'
-                    else:
-                        p = '/number/' + f'/{ch}/'
-
+                        p += '_1/'
                 else:  # korean
-                    p = '/korean/' + f'/{bd_eng2kor_v1p3.inverse[ch]}/'
+
+                    # TODO : 여기에서 '지역'이 아니거나 '아바사자배'가 아닌 것들에 대해 필터링을 할 필요가 있다. 안하면 random_file_in_dir()에서 에러
+
+                    p = f'/korean/{bd_eng2kor_v1p3.inverse[ch]}/'
                     if i == 0:
                         p = p[:-1] + f'{bd_eng2kor_v1p3.inverse[demand_str[1]]}/'
                         i += 1
-                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED),
-                                 self.char_xywh2[((i - 1) * 2) + 1])
+                img = cv2.resize(cv2.imread(self.random_file_in_dir(base_path + p), cv2.IMREAD_UNCHANGED), self.char_xywh2[((i - 1) * 2) + 1])
                 self.overlay(img_template, img, self.char_xywh2[((i - 1) * 2)])
 
         elif LP_cls == 'P6':
