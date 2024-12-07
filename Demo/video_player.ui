@@ -19,6 +19,22 @@
      <item>
       <layout class="QVBoxLayout" name="video1Layout">
        <item>
+        <widget class="QLabel" name="video1Label">
+         <property name="text">
+          <string>원본 이미지</string>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGraphicsView" name="video1View"/>
        </item>
        <item>
@@ -27,13 +43,19 @@
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Input image</string>
+          <string></string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
          </property>
          <property name="readOnly">
           <bool>false</bool>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
          </property>
         </widget>
        </item>
@@ -42,12 +64,34 @@
      <item>
       <layout class="QVBoxLayout" name="video2Layout">
        <item>
+        <widget class="QLabel" name="video2Label">
+         <property name="text">
+          <string>비식별화(=암호화)(=encrypted)</string>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGraphicsView" name="video2View"/>
        </item>
        <item>
         <widget class="QLineEdit" name="editBox1">
          <property name="placeholderText">
           <string>password1</string>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
          </property>
         </widget>
        </item>
@@ -56,12 +100,34 @@
      <item>
       <layout class="QVBoxLayout" name="video3Layout">
        <item>
+        <widget class="QLabel" name="video3Label">
+         <property name="text">
+          <string>재식별화(=역변환)(=decrypted)</string>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGraphicsView" name="video3View"/>
        </item>
        <item>
         <widget class="QLineEdit" name="editBox2">
          <property name="placeholderText">
           <string>password2</string>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>20</pointsize>
+          </font>
          </property>
         </widget>
        </item>

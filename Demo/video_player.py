@@ -90,7 +90,10 @@ class VideoPlayer(QtWidgets.QWidget):
             return p_number
 
         random.seed(password)
-        adder = random.randint(1, 999999)
+        while True:
+            adder = random.randint(100, 999999)
+            if adder % 10 != 0:
+                break
         if reverse:
             adder = -adder
 
@@ -167,10 +170,12 @@ class VideoPlayer(QtWidgets.QWidget):
                     dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
 
                 img_cond1 = frame.copy()
+                types_numbers1 = []
                 for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers):
                     new_number = self.encrypt_number(p_type, p_number, self.password1)
+                    types_numbers1.append((p_type, new_number))
 
-                    p_type_temp = 'P1-1' if p_type == 'P1' else p_type
+                    p_type_temp = 'P1-2' if p_type == 'P1' else p_type
                     img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     # graphical model을 전체 이미지 좌표계로 warping
@@ -184,19 +189,29 @@ class VideoPlayer(QtWidgets.QWidget):
                     img1 = cv2.bitwise_and(img_cond1, img_cond1, mask=cv2.bitwise_not(mask_white))
                     img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
                     img_cond1 = img1 + img2
-                cv2.imshow('img_cond1', img_cond1)
-                cv2.waitKey(1)
 
-                # # 좌표 계산
-                # g_h, g_w = img_gened.shape[:2]
-                # dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
-                # cv2.polylines(img_superimposed, [np.int32(dst_xy)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+                img_cond2 = frame.copy()
+                for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers1):
+                    new_number = self.encrypt_number(p_type, p_number, self.password2, reverse=True)
 
-                # img_results.append([img_superimposed, img])
-                # dst_xy_list.append(dst_xy)
+                    p_type_temp = 'P1-1' if p_type == 'P1' else p_type
+                    img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
+                    img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+                    # graphical model을 전체 이미지 좌표계로 warping
+                    img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
 
-                for i, scene in enumerate(self.video_scenes):
-                    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    # 해당 영역 mask 생성
+                    img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
+                    mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
+
+                    # 영상 합성
+                    img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
+                    img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
+                    img_cond2 = img1 + img2
+
+                displays = [frame, img_cond1, img_cond2]
+                for i, (scene, disp) in enumerate(zip(self.video_scenes, displays)):
+                    img = cv2.cvtColor(disp, cv2.COLOR_BGR2RGB)
 
                     height, width, channel = img.shape
                     qimg = QtGui.QImage(img.data, width, height, channel * width, QtGui.QImage.Format_RGB888)
