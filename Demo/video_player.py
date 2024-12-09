@@ -16,7 +16,6 @@ from LP_Detection import BBox
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from LP_Swapping.models.masked_pix2pix_model import Masked_Pix2pixModel
-from LP_Swapping.utils import crop_img_square
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
 from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer
 from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
@@ -92,7 +91,7 @@ class VideoPlayer(QtWidgets.QWidget):
 
         self.video_capture = None
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.t_update_frames)
+        self.timer.timeout.connect(self.qtimer_update_frames)
 
         self.is_playing = False
 
@@ -102,8 +101,8 @@ class VideoPlayer(QtWidgets.QWidget):
         # 입력 필드의 텍스트 변경 시 콜백
         self.editBox1.textChanged.connect(self.get_text_from_editbox)
         self.editBox2.textChanged.connect(self.get_text_from_editbox)
-        self.password1 = ''
-        self.password2 = ''
+        self.password1to2 = ''
+        self.password2to3 = ''
 
         self.d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
         self.r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
@@ -174,7 +173,7 @@ class VideoPlayer(QtWidgets.QWidget):
         new_number = ''.join(new_tokens)
         return new_number
 
-    def t_update_frames(self):
+    def qtimer_update_frames(self):
         if self.video_capture and self.video_capture.isOpened():
             ret, frame = self.video_capture.read()
             if ret:
@@ -229,46 +228,14 @@ class VideoPlayer(QtWidgets.QWidget):
                     dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
                     dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
 
-                img_cond1 = frame.copy()
-                types_numbers1 = []
-                img_swapped_list = []
+                img_cond2 = frame.copy()
+                img_disp2 = frame.copy()
+                types_numbers2 = []
                 for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers)):
-                    new_number = self.encrypt_number(p_type, p_number, self.password1)
-                    types_numbers1.append((p_type, new_number))
+                    new_number = self.encrypt_number(p_type, p_number, self.password1to2)
+                    types_numbers2.append((p_type, new_number))
 
                     p_type_temp = 'P1-2' if p_type == 'P1' else p_type
-                    img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
-                    img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
-                    # graphical model을 전체 이미지 좌표계로 warping
-                    img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
-
-                    # 해당 영역 mask 생성
-                    img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
-                    mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
-
-                    # 영상 합성
-                    img1 = cv2.bitwise_and(img_cond1, img_cond1, mask=cv2.bitwise_not(mask_white))
-                    img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
-                    img_cond1 = img1 + img2
-
-                    A = crop_img_square(img_cond1, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    B = crop_img_square(frame, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    M = crop_img_square(mask_white, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    inputs = self.swapper.make_tensor(A, B, M)
-                    img_swapped = self.swapper.swap(inputs)
-                    img_swapped_list.append(img_swapped)
-                img_swapped_multi = np.empty((256, 0, 3), np.uint8)
-                for img in img_swapped_list:
-                    img_swapped_multi = np.hstack([img_swapped_multi, img])
-                if len(img_swapped_list) > 0:
-                    cv2.imshow('img_swapped_multi', img_swapped_multi)
-                    cv2.waitKey(1)
-
-                img_cond2 = frame.copy()
-                for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers1):
-                    new_number = self.encrypt_number(p_type, p_number, self.password2, reverse=True)
-
-                    p_type_temp = 'P1-1' if p_type == 'P1' else p_type
                     img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     # graphical model을 전체 이미지 좌표계로 warping
@@ -283,7 +250,76 @@ class VideoPlayer(QtWidgets.QWidget):
                     img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
                     img_cond2 = img1 + img2
 
-                displays = [frame, img_cond1, img_cond2]
+                    # 정방형 crop
+                    cx = int(cxcywhs[i][0])
+                    cy = int(cxcywhs[i][1])
+                    margin = int(cxcywhs[i][2])
+                    sq_lr = np.array([cx - margin, cx + margin])
+                    sq_tb = np.array([cy - margin, cy + margin])
+                    if sq_lr[0] < 0:
+                        sq_lr -= sq_lr[0]
+                    if img_gen_recon.shape[1] - sq_lr[1] <= 0:
+                        sq_lr += (img_gen_recon.shape[1] - sq_lr[1])
+                    if sq_tb[0] < 0:
+                        sq_tb -= sq_tb[0]
+                    if img_gen_recon.shape[0] - sq_tb[1] <= 0:
+                        sq_tb += (img_gen_recon.shape[0] - sq_tb[1])
+
+                    # A = crop_img_square(img_cond1, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    # B = crop_img_square(frame, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    # M = crop_img_square(mask_white, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    A = img_cond2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    inputs = self.swapper.make_tensor(A, B, M)
+                    img_swapped = self.swapper.swap(inputs)
+                    img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
+                    img_disp2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
+
+                img_cond3 = frame.copy()
+                img_disp3 = frame.copy()
+                for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers2)):
+                    new_number = self.encrypt_number(p_type, p_number, self.password2to3, reverse=True)
+
+                    p_type_temp = 'P1-1' if p_type == 'P1' else p_type
+                    img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
+                    img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+                    # graphical model을 전체 이미지 좌표계로 warping
+                    img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
+
+                    # 해당 영역 mask 생성
+                    img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
+                    mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
+
+                    # 영상 합성
+                    img1 = cv2.bitwise_and(img_cond3, img_cond3, mask=cv2.bitwise_not(mask_white))
+                    img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
+                    img_cond3 = img1 + img2
+
+                    # 정방형 crop
+                    cx = int(cxcywhs[i][0])
+                    cy = int(cxcywhs[i][1])
+                    margin = int(cxcywhs[i][2])
+                    sq_lr = np.array([cx - margin, cx + margin])
+                    sq_tb = np.array([cy - margin, cy + margin])
+                    if sq_lr[0] < 0:
+                        sq_lr -= sq_lr[0]
+                    if img_gen_recon.shape[1] - sq_lr[1] <= 0:
+                        sq_lr += (img_gen_recon.shape[1] - sq_lr[1])
+                    if sq_tb[0] < 0:
+                        sq_tb -= sq_tb[0]
+                    if img_gen_recon.shape[0] - sq_tb[1] <= 0:
+                        sq_tb += (img_gen_recon.shape[0] - sq_tb[1])
+
+                    A = img_cond3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    inputs = self.swapper.make_tensor(A, B, M)
+                    img_swapped = self.swapper.swap(inputs)
+                    img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
+                    img_disp3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
+
+                displays = [frame, img_disp2, img_disp3]
                 for i, (scene, disp) in enumerate(zip(self.video_scenes, displays)):
                     img = cv2.cvtColor(disp, cv2.COLOR_BGR2RGB)
 
@@ -309,8 +345,8 @@ class VideoPlayer(QtWidgets.QWidget):
                 self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 동영상 반복 재생
 
     def get_text_from_editbox(self):
-        self.password1 = self.editBox1.text()
-        self.password2 = self.editBox2.text()
+        self.password1to2 = self.editBox1.text()
+        self.password2to3 = self.editBox2.text()
         # self.setWindowTitle(f"{text1} {text2}")
 
     def closeEvent(self, event):
