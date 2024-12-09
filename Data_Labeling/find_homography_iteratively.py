@@ -3,8 +3,8 @@ import os
 import cv2
 import numpy as np
 
-from Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
-from Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
+from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
+from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from LP_Detection import BBox, Quadrilateral
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
@@ -40,6 +40,7 @@ def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
 
 
 def calculate_text_area_coordinates(generator, shape, plate_type):
+    # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # 이런 방법으로 이 함수를 변경하여야 함
     cr_x = int(generator.char_xywh[0][0] * 1) - 10
     cr_y = int(generator.char_xywh[0][1] * 1) - 10
     cr_w = (generator.char_xywh[1][0] * 6 + generator.char_xywh[5][0]) * 1 + 20
@@ -128,6 +129,18 @@ def calculate_total_transformation(mat_A, mat_H):
     return mat_T
 
 
+def find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb):
+    g_h, g_w = img_gened.shape[:2]
+    mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+    # cv2.imshow('mask_text_area', mask_text_area)
+    # cv2.waitKey()
+    img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
+    pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
+    mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
+    mat_T = calculate_total_transformation(mat_A, mat_H)
+    return mat_T
+
+
 def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
     shapes = []
     print("1 or 2 or 3")
@@ -165,6 +178,7 @@ if __name__ == '__main__':
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
+    generator = Graphical_Model_Generator_KOR()
     for _, img_path in enumerate(img_paths):
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
         i_h, i_w = img.shape[:2]
@@ -189,18 +203,9 @@ if __name__ == '__main__':
 
         img_results = []
         dst_xy_list = []
-        generator = Graphical_Model_Generator_KOR('./Graphical_Model_Generation/BetaType/korean_LP')  # 반복문 안에서 객체 생성 시 오버헤드가 발생
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
-            g_h, g_w = img_gened.shape[:2]
-            mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
-            cv2.imshow('mask_text_area', mask_text_area)
-            # cv2.waitKey()
-            # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
-            img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
-            pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
-            mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
-            mat_T = calculate_total_transformation(mat_A, mat_H)
+            mat_T = find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb)
 
             # graphical model을 전체 이미지 좌표계로 warping
             img_gen_recon = cv2.warpPerspective(img_gened, mat_T, (i_w, i_h))
@@ -215,6 +220,7 @@ if __name__ == '__main__':
             img_superimposed = img1 + img2
 
             # 좌표 계산
+            g_h, g_w = img_gened.shape[:2]
             dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
             cv2.polylines(img_superimposed, [np.int32(dst_xy)], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
 
