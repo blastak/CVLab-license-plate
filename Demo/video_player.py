@@ -3,17 +3,73 @@ import sys
 
 import cv2
 import numpy as np
+import torch
+import torchvision.transforms as transforms
+from PIL import Image
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtWidgets import QFileDialog, QGraphicsScene
+from torchvision.utils import make_grid
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from Data_Labeling.find_homography_iteratively import find_total_transformation
 from LP_Detection import BBox
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Swapping.models.masked_pix2pix_model import Masked_Pix2pixModel
+from LP_Swapping.utils import crop_img_square
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
 from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer
-from Utils import xywh2xyxy, xyxy2xywh
+from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
+
+
+class Swapping_Runner():
+    image_width = 256
+    tf_img = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Resize((image_width, image_width), antialias=True),
+        transforms.Normalize([0.5] * 3, [0.5] * 3)
+    ])
+    tf_mask = transforms.Compose([
+        transforms.Grayscale(),
+        transforms.ToTensor(),
+        transforms.Resize((image_width, image_width), antialias=True),
+        transforms.Normalize([0.5], [0.5])
+    ])
+
+    def __init__(self, ckpt_path):
+        ########## torch environment settings
+        gpu_ids = [0]
+        self.device = torch.device('cuda:%d' % gpu_ids[0] if (torch.cuda.is_available() and len(gpu_ids) > 0) else 'cpu')
+        torch.set_default_device(self.device)  # working on torch>2.0.0
+        if torch.cuda.is_available() and len(gpu_ids) > 1:
+            torch.multiprocessing.set_start_method('spawn')
+        ########## model settings
+        self.model = Masked_Pix2pixModel(4, 3, gpu_ids)
+        self.model.load_checkpoints(ckpt_path)
+        self.model.eval()
+
+    def make_tensor(self, A, B, M):
+        A_ = Image.fromarray(A)
+        B_ = Image.fromarray(B)
+        M_ = Image.fromarray(M)
+        t_cond = self.tf_img(A_)
+        t_real = self.tf_img(B_)
+        t_mask = self.tf_mask(M_)
+        t_cond = torch.cat((t_cond, t_mask), dim=0)
+
+        t_cond = torch.unsqueeze(t_cond, dim=0)
+        t_real = torch.unsqueeze(t_real, dim=0)
+        sample = {'condition_image': t_cond, 'real_image': t_real}
+        return sample
+
+    def swap(self, inputs):
+        self.model.input_data(inputs)
+        self.model.testing()
+        detached = self.model.fake_image.detach().cpu()
+        bs = 1
+        montage = make_grid(detached, nrow=int(bs ** 0.5), normalize=True).permute(1, 2, 0).numpy()
+        montage = cv2.normalize(montage, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F).astype(np.uint8)
+        return montage
 
 
 class VideoPlayer(QtWidgets.QWidget):
@@ -53,6 +109,8 @@ class VideoPlayer(QtWidgets.QWidget):
         self.r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
         self.tracker = TrackerWithVoting()
         self.gm_generator = Graphical_Model_Generator_KOR()  # 반복문 안에서 객체 생성 시 오버헤드가 발생
+
+        self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
     def center_window(self):
         screen = QtWidgets.QApplication.primaryScreen()  # 기본 화면 가져오기
@@ -147,6 +205,7 @@ class VideoPlayer(QtWidgets.QWidget):
                 mat_Ts = []
                 types_numbers = []
                 dst_xys = []
+                cxcywhs = []
                 for trk in self.tracker.tracks:
                     if trk.last_xyxy[0] < 0 or trk.last_xyxy[1] < 0 or trk.last_xyxy[2] >= frame.shape[1] or trk.last_xyxy[3] >= frame.shape[0]:
                         continue
@@ -159,6 +218,7 @@ class VideoPlayer(QtWidgets.QWidget):
                         img_gen0 = self.gm_generator.make_LP(p_number, p_type_temp)
                     except:
                         continue
+                    cxcywhs.append(xywh2cxcywh(xyxy2xywh(trk.last_xyxy)))
                     types_numbers.append((p_type, p_number))  # 암호화를 위해 저장
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
@@ -171,7 +231,8 @@ class VideoPlayer(QtWidgets.QWidget):
 
                 img_cond1 = frame.copy()
                 types_numbers1 = []
-                for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers):
+                img_swapped_list = []
+                for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers)):
                     new_number = self.encrypt_number(p_type, p_number, self.password1)
                     types_numbers1.append((p_type, new_number))
 
@@ -189,6 +250,19 @@ class VideoPlayer(QtWidgets.QWidget):
                     img1 = cv2.bitwise_and(img_cond1, img_cond1, mask=cv2.bitwise_not(mask_white))
                     img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
                     img_cond1 = img1 + img2
+
+                    A = crop_img_square(img_cond1, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    B = crop_img_square(frame, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    M = crop_img_square(mask_white, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
+                    inputs = self.swapper.make_tensor(A, B, M)
+                    img_swapped = self.swapper.swap(inputs)
+                    img_swapped_list.append(img_swapped)
+                img_swapped_multi = np.empty((256, 0, 3), np.uint8)
+                for img in img_swapped_list:
+                    img_swapped_multi = np.hstack([img_swapped_multi, img])
+                if len(img_swapped_list) > 0:
+                    cv2.imshow('img_swapped_multi', img_swapped_multi)
+                    cv2.waitKey(1)
 
                 img_cond2 = frame.copy()
                 for mat_T, (p_type, p_number) in zip(mat_Ts, types_numbers1):
