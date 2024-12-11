@@ -1,6 +1,5 @@
 import argparse
 import os
-import shutil
 
 import cv2
 import numpy as np
@@ -12,12 +11,49 @@ from LP_Recognition.VIN_OCR import load_model_VinOCR
 from Utils import imread_uni, trans_eng2kor_v1p3
 
 
+def visualize_bbox(img, r_out, char_xywh):
+    for i, b in enumerate(r_out):
+        cv2.rectangle(img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
+    for i in range(len(char_xywh) // 2):
+        cv2.rectangle(img, (int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])), (255, 255, 255), 1)
+    cv2.imshow("Image", img)
+    cv2.waitKey()
+
+
 def calculate_center(box):
-    """바운딩박스의 중심점 계산"""
-    x_min, y_min, x_width, y_height = box
-    center_x = x_min + (x_width / 2)
-    center_y = y_min + (y_height / 2)
+    x_min, y_min, width, height = box
+    center_x = x_min + (width / 2)
+    center_y = y_min + (height / 2)
     return np.array([center_x, center_y])
+
+
+def calculate_offset(reference_points, bbox_centers):
+    offset_sum = 0
+    # Hungarian Algorithm
+    cost_matrix = np.zeros((len(reference_points), len(bbox_centers)))
+    for i, ref_point in enumerate(reference_points):
+        for j, bbox_point in enumerate(bbox_centers):
+            cost_matrix[i, j] = np.linalg.norm(ref_point - bbox_point)
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    # print(row_ind, col_ind)
+    for r, c in zip(row_ind, col_ind):
+        offset_sum += cost_matrix[r, c]
+    #     print(f"Reference Point {r} is matched with Bounding Box {c}")
+    #     print(f"Distance: {cost_matrix[r, c]:.2f}")
+    # print(offset_sum)
+    return offset_sum
+
+
+def save_GoodMatches(prefix_path, img_path, plate_type, threshold):
+    move_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}_Front_H{threshold}')
+    save_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}')
+    if not os.path.exists(move_path):
+        os.makedirs(move_path)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    os.rename(os.path.join(folder_path, img_path), os.path.join(move_path, img_path))
+    os.rename(os.path.join(prefix_path, plate_type, img_path[6:]), os.path.join(save_path, img_path[6:]))
+    os.rename(os.path.join(prefix_path, plate_type, img_path[6:-4] + '.json'), os.path.join(save_path, img_path[6:-4] + '.json'))
 
 
 if __name__ == '__main__':
@@ -35,33 +71,16 @@ if __name__ == '__main__':
 
         r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
 
-        filtered_files = []  # 유지할 파일
-
         plate_type = folder_path.split('_')[-1]
         char_xywh = generator.LP_char_xywh.get(plate_type)
         for _, img_path in tqdm(enumerate(img_paths), total=len(img_paths), desc=f'{folder_name}'):
             img = imread_uni(os.path.join(folder_path, img_path))  # 이미지 로드
             plate_number = img_path.split('_')[-1][:-4]
 
-            height, width = img.shape[:2]
-
-            target_height = int(height * 1)
-            target_width = int(width * 1)
-
-            padded_img = np.zeros((target_height, target_width, 3), dtype=np.uint8)
-            offset_x = (target_width - width) // 2
-            offset_y = (target_height - height) // 2
-            padded_img[offset_y:offset_y + height, offset_x:offset_x + width] = img
-
-            r_out = r_net.resize_N_forward(padded_img)
+            r_out = r_net.resize_N_forward(img)
 
             # Bounding Box visualize
-            # for i, b in enumerate(r_out):
-            #     cv2.rectangle(padded_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
-            # for i in range(len(char_xywh) // 2):
-            #     cv2.rectangle(padded_img, (int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])), (255, 255, 255), 1)
-            # cv2.imshow("Padded Image", padded_img)
-            # cv2.waitKey()
+            # visualize_bbox(img, r_out, char_xywh)
 
             if len(r_out) < 3:
                 continue
@@ -88,19 +107,8 @@ if __name__ == '__main__':
                 ref_center = calculate_center([int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])])
                 reference_points.append(ref_center)
 
-            # Hungarian Algorithm
-            cost_matrix = np.zeros((len(reference_points), len(bbox_centers)))
-            for i, ref_point in enumerate(reference_points):
-                for j, bbox_point in enumerate(bbox_centers):
-                    cost_matrix[i, j] = np.linalg.norm(ref_point - bbox_point)
-            row_ind, col_ind = linear_sum_assignment(cost_matrix)
-            # print(row_ind, col_ind)
-            offset_sum = 0
-            for r, c in zip(row_ind, col_ind):
-                offset_sum += cost_matrix[r, c]
-            #     print(f"Reference Point {r} is matched with Bounding Box {c}")
-            #     print(f"Distance: {cost_matrix[r, c]:.2f}")
-            # print(offset_sum)
+            # 비교
+            offset_sum = calculate_offset(reference_points, bbox_centers)
 
             threshold = 21
             if plate_type == 'P2':
@@ -109,17 +117,7 @@ if __name__ == '__main__':
                 threshold = 24
             elif plate_type == 'P1-4':
                 threshold = 26
+
             if offset_sum <= threshold:
                 print('correct')
-                move_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}_Front_H{threshold}')
-                save_path = os.path.join(prefix_path, f'GoodMatches_{plate_type}')
-                if not os.path.exists(move_path):
-                    os.makedirs(move_path)
-                if not os.path.exists(save_path):
-                    os.makedirs(save_path)
-                os.rename(os.path.join(folder_path, img_path), os.path.join(move_path, img_path))
-                os.rename(os.path.join(prefix_path, plate_type, img_path[6:]), os.path.join(save_path, img_path[6:]))
-                os.rename(os.path.join(prefix_path, plate_type, img_path[6:-4] + '.json'), os.path.join(save_path, img_path[6:-4] + '.json'))
-
-            # cv2.imshow("Padded Image", padded_img)
-            # cv2.waitKey()
+                save_GoodMatches(prefix_path, img_path, plate_type, threshold)
