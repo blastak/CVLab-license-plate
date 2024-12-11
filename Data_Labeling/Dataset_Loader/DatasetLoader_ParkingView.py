@@ -1,4 +1,3 @@
-import json
 import os
 from xml.etree.ElementTree import parse
 
@@ -39,25 +38,6 @@ class DatasetLoader_ParkingView:
             plate_type = 'P0'
             plate_number = xml_path[:-4].split(sep='_')[-1]
         plate_type = 'P1-1' if plate_type == 'P1' else plate_type  # P1 일 경우 P1-1 로 변경
-        return plate_type, plate_number, left, top, right, bottom
-
-    def parse_json(self, json_path):
-        plate_number = plate_type = ''
-        left = top = right = bottom = 0
-        filename = os.path.join(self.base_path, json_path)
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            for s in data['shapes']:
-                name = s['label']
-                if name.find('P') != -1 and s['shape_type'] == 'rectangle':
-                    plate_type, plate_number = name.split('_')
-                    left, top = map(int, s['points'][0])
-                    right, bottom = map(int, s['points'][1])
-        except Exception as e:
-            print(str(e))
-            plate_type = 'P0'
-        plate_type = 'P1-1' if 'P1' else plate_type  # P1 일 경우 P1-1 로 변경
         return plate_type, plate_number, left, top, right, bottom
 
 
