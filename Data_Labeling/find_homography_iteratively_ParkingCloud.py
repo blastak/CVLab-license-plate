@@ -11,7 +11,7 @@ from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
-from Utils import imread_uni, save_json, imwrite_uni
+from Utils import imread_uni, save_json, imwrite_uni, iou_4corner
 from find_homography_iteratively import frontalization
 
 extensions = ['.jpg', '.png', '.xml', '.json']
@@ -126,17 +126,6 @@ def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, im
     save_json(path, shapes, imagePath, imageHeight, imageWidth)
 
 
-def cal_IOU(b, p):
-    rect = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h), (b.x, b.y + b.h)])
-    para = np.float32([p[0], p[1], p[2], p[3]])
-    inter_area, _ = cv2.intersectConvexConvex(rect, para)
-    rect_area = b.w * b.h
-    para_area = cv2.contourArea(para)
-    union_area = rect_area + para_area - inter_area
-    iou = inter_area / union_area if union_area > 0 else 0
-    return iou
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
@@ -174,10 +163,10 @@ if __name__ == '__main__':
             boxes.append(qb_iwpod)
 
         # XML BBox와 iwpod_tf corner 비교
-        IOU = 0
+        iou = 0
         if parallelograms:
-            IOU = cal_IOU(bb_xml, parallelograms[0])
-            print(IOU)
+            iou = iou_4corner(bb_xml, parallelograms[0])
+            print(iou)
 
         img_results = []
         dst_xy_list = []
@@ -212,7 +201,7 @@ if __name__ == '__main__':
 
         print(plate_number)
 
-        if IOU > 0.5:
+        if iou > 0.5:
             i = 2
         else:
             i = 0
@@ -233,7 +222,7 @@ if __name__ == '__main__':
         # frontalization 저장
         save_path = os.path.join(prefix_path, 'front_' + plate_type)
         dst_xy = Quadrilateral(dst_xy[0][0], dst_xy[0][1], dst_xy[0][2], dst_xy[0][3])
-        img_front, mat_A = frontalization(img, dst_xy, generator.plate_wh[0], generator.plate_wh[1],4)
+        img_front, mat_A = frontalization(img, dst_xy, generator.plate_wh[0], generator.plate_wh[1], 4)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         imwrite_uni(os.path.join(save_path, 'front_' + img_path), img_front)

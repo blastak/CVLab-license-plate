@@ -1,5 +1,6 @@
 import argparse
-from Utils import imwrite_uni
+
+from Utils import imwrite_uni, iou_4corner
 from find_homography_iteratively import *
 
 
@@ -18,17 +19,6 @@ def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, im
     shapes.append(shape)
 
     save_json(path, shapes, imagePath, imageHeight, imageWidth)
-
-
-def cal_IOU(b, p):
-    rect = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h), (b.x, b.y + b.h)])
-    para = np.float32([p[0], p[1], p[2], p[3]])
-    inter_area, _ = cv2.intersectConvexConvex(rect, para)
-    rect_area = b.w * b.h
-    para_area = cv2.contourArea(para)
-    union_area = rect_area + para_area - inter_area
-    iou = inter_area / union_area if union_area > 0 else 0
-    return iou
 
 
 if __name__ == '__main__':
@@ -68,11 +58,11 @@ if __name__ == '__main__':
         # IWPOD 존재 하지 않으면 VIN_LPD 사용
         if not d_out and not parallelograms:
             continue
-        IOU = 0
+        iou = 0
         if d_out and parallelograms:
             i = 1
-            IOU = cal_IOU(bb_vinlpd, p)
-            print(IOU)
+            iou = iou_4corner(d, p)
+            print(iou)
         else:
             i = 0
 
