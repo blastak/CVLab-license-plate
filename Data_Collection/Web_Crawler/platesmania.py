@@ -11,39 +11,34 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-# 10개 다 긁기
-pick_car = ['body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(5) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(5) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(6) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(6) > div:nth-child(3) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(7) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(7) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(9) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(9) > div:nth-child(3) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(10) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
-            'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(10) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img']
-next_page = 'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(2) > ul > li:nth-child(12) > a'
 
-
-# css selector 받아오기
-def wait_for_elem(selector):
-    try:
-        elem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-    except:
-        elem = None
-    return elem
-
-
-if __name__ == "__main__":
-    url = 'https://platesmania.com/kr/gallery.php?gal=kr&fon=1'  # 폰트 1페이지
-    # url = 'https://platesmania.com/kr/gallery.php?&fon=5&start=8' # 특정 페이지
+def platesmania(url):
+    # 한 페이지당 10개
+    pick_car = ['body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(5) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(5) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(6) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(6) > div:nth-child(3) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(7) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(7) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(9) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(9) > div:nth-child(3) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(10) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
+                'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(10) > div:nth-child(2) > div > div.panel-body > div:nth-child(1) > a > img']
+    next_page = 'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(2) > ul > li:nth-child(12) > a'
 
     # 크롬 브라우져 켜기
     subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chromeCookie"')
     option = Options()
     option.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=option)
-    # driver.maximize_window()
+
+    # css selector 받아오기
+    def wait_for_elem(selector):
+        try:
+            elem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+        except:
+            elem = None
+        return elem
 
     # url 진입
     aaa = wait_for_elem('# input')
@@ -97,3 +92,8 @@ if __name__ == "__main__":
             next_page = 'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(2) > ul > li:nth-child(8) > a'
             aaa = wait_for_elem(next_page)
         aaa.click()
+
+
+if __name__ == "__main__":
+    url = 'https://platesmania.com/kr/gallery.php?gal=kr&fon=2'  # 폰트 1페이지
+    platesmania(url)
