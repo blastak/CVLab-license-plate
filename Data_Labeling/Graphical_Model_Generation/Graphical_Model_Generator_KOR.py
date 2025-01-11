@@ -73,7 +73,7 @@ class Graphical_Model_Generator_KOR:
         assert plate_type in self.plate_wh
         assert '배' not in plate_number
 
-        img_bg = cv2.cvtColor(self.images[plate_type]['template'], cv2.COLOR_BGRA2BGR)
+        img_bg = self.images[plate_type]['template']
 
         img_fgs = []
         kor_prov, digit_2, kor_mid, digit_4 = plate_number_tokenizer(plate_number)

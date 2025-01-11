@@ -241,14 +241,10 @@ class VideoPlayer(QtWidgets.QWidget):
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
 
-                    # 해당 영역 mask 생성
-                    img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
-                    mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
-
                     # 영상 합성
-                    img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
-                    img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
-                    img_cond2 = img1 + img2
+                    fg_rgb = img_gen_recon[:, :, :3]  # RGB 채널
+                    alpha = img_gen_recon[:, :, 3] / 255  # alpha 채널
+                    img_cond2 = (alpha[:, :, np.newaxis] * fg_rgb + (1 - alpha[:, :, np.newaxis]) * img_cond2).astype(np.uint8)
 
                     # 정방형 crop
                     cx = int(cxcywhs[i][0])
@@ -270,7 +266,7 @@ class VideoPlayer(QtWidgets.QWidget):
                     # M = crop_img_square(mask_white, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
                     A = img_cond2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
                     B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    M = alpha[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
                     inputs = self.swapper.make_tensor(A, B, M)
                     img_swapped = self.swapper.swap(inputs)
                     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
@@ -287,14 +283,10 @@ class VideoPlayer(QtWidgets.QWidget):
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
 
-                    # 해당 영역 mask 생성
-                    img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
-                    mask_white = cv2.warpPerspective(img_gened_white, mat_T, frame.shape[1::-1])
-
                     # 영상 합성
-                    img1 = cv2.bitwise_and(img_cond3, img_cond3, mask=cv2.bitwise_not(mask_white))
-                    img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
-                    img_cond3 = img1 + img2
+                    fg_rgb = img_gen_recon[:, :, :3]  # RGB 채널
+                    alpha = img_gen_recon[:, :, 3] / 255  # alpha 채널
+                    img_cond3 = (alpha[:, :, np.newaxis] * fg_rgb + (1 - alpha[:, :, np.newaxis]) * img_cond3).astype(np.uint8)
 
                     # 정방형 crop
                     cx = int(cxcywhs[i][0])
@@ -313,7 +305,7 @@ class VideoPlayer(QtWidgets.QWidget):
 
                     A = img_cond3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
                     B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    M = alpha[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
                     inputs = self.swapper.make_tensor(A, B, M)
                     img_swapped = self.swapper.swap(inputs)
                     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
