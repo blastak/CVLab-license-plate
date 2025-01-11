@@ -359,6 +359,24 @@ def iou(bb1, bb2):
     return o
 
 
+def iou_4corner(b1, b2): # 4꼭지점을 이용한 iou
+    if 'BBox' in str(b1.__class__):
+        b1 = np.float32([(b1.x, b1.y), (b1.x + b1.w, b1.y), (b1.x + b1.w, b1.y + b1.h), (b1.x, b1.y + b1.h)])
+    else:
+        b1 = np.float32([b1[0], b1[1], b1[2], b1[3]])
+    if 'BBox' in str(b2.__class__):
+        b2 = np.float32([(b2.x, b2.y), (b2.x + b2.w, b2.y), (b2.x + b2.w, b2.y + b2.h), (b2.x, b2.y + b2.h)])
+    else:
+        b2 = np.float32([b2[0], b2[1], b2[2], b2[3]])
+
+    inter_area, _ = cv2.intersectConvexConvex(b1, b2)
+    area1 = cv2.contourArea(b1)
+    area2 = cv2.contourArea(b2)
+    union_area = area1 + area2 - inter_area
+    iou = inter_area / union_area if union_area > 0 else 0
+    return iou
+
+
 def plate_number_tokenizer(plate_number='서울12가3456'):
     digits = re.findall('\\d+', plate_number)
     koreans = re.findall('[가-힣]+', plate_number)
