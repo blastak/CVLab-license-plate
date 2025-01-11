@@ -72,7 +72,7 @@ if __name__ == '__main__':
         r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
 
         plate_type = folder_path.split('_')[-1]
-        char_xywh = generator.LP_char_xywh.get(plate_type)
+        char_xywh = generator.char_xywh.get(plate_type)
         for _, img_path in tqdm(enumerate(img_paths), total=len(img_paths), desc=f'{folder_name}'):
             img = imread_uni(os.path.join(folder_path, img_path))  # 이미지 로드
             plate_number = img_path.split('_')[-1][:-4]
@@ -104,7 +104,7 @@ if __name__ == '__main__':
             else:  # P1-1, P1-2, P2, P6
                 num = [0, 1, 3, 4, 5, 6]
             for i in num:
-                ref_center = calculate_center([int(char_xywh[i * 2][0]), int(char_xywh[i * 2][1]), int(char_xywh[i * 2 + 1][0]), int(char_xywh[i * 2 + 1][1])])
+                ref_center = calculate_center(list(map(int, char_xywh[i])))
                 reference_points.append(ref_center)
 
             # 비교
