@@ -1,14 +1,12 @@
-import inspect
 import os
-import random
+from pathlib import Path
+from time import time
 
 import cv2
 import numpy as np
 
 from Utils import imread_uni, plate_number_tokenizer, bd_eng2kor_v1p3, trans_kor2eng_v1p3
 
-from time import time
-from pathlib import Path
 
 class Graphical_Model_Generator_KOR:
     def __init__(self, base_path='BetaType/korean_LP/', scale_up=2):
@@ -73,7 +71,7 @@ class Graphical_Model_Generator_KOR:
         assert plate_type in self.plate_wh
         assert '배' not in plate_number
 
-        img_bg = self.images[plate_type]['template']
+        img_bg = self.images[plate_type]['template'].copy()
 
         img_fgs = []
         kor_prov, digit_2, kor_mid, digit_4 = plate_number_tokenizer(plate_number)
@@ -97,14 +95,22 @@ class Graphical_Model_Generator_KOR:
             img_fgs.append(self.images[plate_type][c])
 
         # overlay 시키기
-        st = time()
         for i, xywh in enumerate(self.char_xywh_up[plate_type]):
             xy = xywh[:2]
             self.overlay(img_bg, img_fgs[i], xy)
-        print('overlay %.3fms' % ((time() - st) * 1000))
 
         return img_bg
 
+    def get_plate_number_area_only(self, plate_type):
+        left_box = min(self.char_xywh[plate_type], key=lambda x: x[0])
+        top_box = min(self.char_xywh[plate_type], key=lambda x: x[1])
+        right_box = max(self.char_xywh[plate_type], key=lambda x: x[0] + x[2])
+        bottom_box = max(self.char_xywh[plate_type], key=lambda x: x[1] + x[3])
+        min_x = left_box[0]
+        min_y = top_box[1]
+        max_x = right_box[0] + right_box[2]
+        max_y = bottom_box[1] + bottom_box[3]
+        return min_x, min_y, max_x, max_y
 
 
 if __name__ == '__main__':
@@ -116,52 +122,52 @@ if __name__ == '__main__':
     img = generator.make_LP('12가3456', 'P1-1')
     print('P1-1 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('78거9012', 'P1-2')
     print('P1-2 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('356수4846', 'P1-3')  # hrkim's
     print('P1-3 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('259노7549', 'P1-4')  # 아반떼
     print('P1-4 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('98구7654', 'P2')
     print('P2 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('인천74바8282', 'P3')
     print('P3 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('대전31아4335', 'P4')
     print('P4 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('서울75마2684', 'P5')
     print('P5 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()
 
     st = time()
     img = generator.make_LP('12가3456', 'P6')
     print('P6 %.3fms' % ((time() - st) * 1000))
     cv2.imshow('img', img)
-    cv2.waitKey(1)
+    cv2.waitKey()

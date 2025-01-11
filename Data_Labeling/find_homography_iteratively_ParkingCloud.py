@@ -42,37 +42,19 @@ def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
 
 
 def calculate_text_area_coordinates(generator, shape, plate_type):
-    cr_x = int(generator.char_xywh[0][0] * 1) - 10
-    cr_y = int(generator.char_xywh[0][1] * 1) - 10
-    cr_w = (generator.char_xywh[1][0] * 6 + generator.char_xywh[5][0]) * 1 + 20
-    cr_h = generator.char_xywh[1][1] * 1 + 20
+    number_area = generator.get_plate_number_area_only(plate_type)
     if plate_type == 'P1-2':
-        cr_x = int(generator.char_xywh[0][0] * 1) - 5
-        cr_y = int(generator.char_xywh[0][1] * 1) - 10
-        cr_w = (generator.char_xywh[1][0] * 6 + generator.char_xywh[5][0]) * 1 + 10
-        cr_h = generator.char_xywh[1][1] * 1 + 20
-    if plate_type == 'P1-3' or plate_type == 'P1-4' or plate_type == 'P4':
-        cr_x = int(generator.char_xywh[0][0] * 1) - 10
-        cr_y = int(generator.char_xywh[0][1] * 1) - 10
-        cr_w = (generator.char_xywh[1][0] * 7 + generator.char_xywh[7][0]) * 1 + 20
-        cr_h = generator.char_xywh[1][1] * 1 + 20
+        margin = [-5, -10, 5, 10]
     elif plate_type == 'P3':
-        cr_x = int(generator.char_xywh[6][0] * 1) - 10
-        cr_y = int(generator.char_xywh[0][1] * 1) - 8
-        cr_w = (generator.char_xywh[9][0] * 4 + generator.char_xywh[7][0]) * 1 + 20
-        cr_h = generator.char_xywh[1][1] * 1 + generator.char_xywh[7][1] + 12 + 20
-    elif plate_type == 'P5':
-        cr_x = 22 - 10
-        cr_y = 14 - 10
-        cr_w = 296 + 20
-        cr_h = 142 + 20
-    elif plate_type == 'P6':
-        cr_x = 15 - 10
-        cr_y = 13 - 10
-        cr_w = 305 + 20
-        cr_h = 143 + 20
+        margin = [-10, -8, 10, 10]
+    elif plate_type in ['P5', 'P6']:
+        margin = [0, 0, 0, 0]
+    else:
+        margin = [-10, -10, 10, 10]
+    min_x, min_y, max_x, max_y = map(int, [a + m for a, m in zip(number_area, margin)])
+
     mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
-    mask_text_area[cr_y:cr_y + cr_h, cr_x:cr_x + cr_w] = 255
+    mask_text_area[min_y:max_y, min_x:max_x] = 255
     return mask_text_area
 
 
