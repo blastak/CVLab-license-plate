@@ -11,13 +11,13 @@ class Graphical_Model_Generator_CHN:
         self.base_path = base_path
         self.plate_wh = (440, 140)
         self.char_xywh = [
-            (15.5, 25), (45, 90),
-            (72.5, 25), (45, 90),
-            (151.5, 25), (45, 90),
-            (208.5, 25), (45, 90),
-            (265.5, 25), (45, 90),
-            (322.5, 25), (45, 90),
-            (379.5, 25), (45, 90),
+            (15.5, 25, 45, 90),
+            (72.5, 25, 45, 90),
+            (151.5, 25, 45, 90),
+            (208.5, 25, 45, 90),
+            (265.5, 25, 45, 90),
+            (322.5, 25, 45, 90),
+            (379.5, 25, 45, 90),
         ]
 
         # scaling
@@ -63,8 +63,8 @@ class Graphical_Model_Generator_CHN:
                 p = '/number/' + f'/{ch}/'
             else:
                 p = '/alphabet/' + f'/{ch.upper()}/'
-            img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p)), self.char_xywh2[(i * 2) + 1])
-            self.overlay(img_template, img, self.char_xywh2[(i * 2)])
+            img = cv2.resize(cv2.imread(self.random_file_in_dir(self.base_path + p)), self.char_xywh2[i][2:])
+            self.overlay(img_template, img, self.char_xywh2[i][:2])
 
         return img_template
 

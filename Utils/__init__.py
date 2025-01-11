@@ -59,13 +59,23 @@ colors = [(128, 0, 255),  # Rose
           ]
 
 
-def trans_eng2kor_v1p3(list_of_txt: list):
+def trans_eng2kor_v1p3(list_of_txt: list):  # example: ['DB', 'CF', '5', '6', 'TA', '6', '7', '5', '8']
     retval = []
-    for chs in list_of_txt:
-        if not chs.isdigit():
+    for txt in list_of_txt:
+        if not txt.isdigit():
             for f, t in bd_eng2kor_v1p3.items():
-                chs = chs.replace(f, t)
-        retval.append(chs)
+                txt = txt.replace(f, t)
+        retval.append(txt)
+    return retval
+
+
+def trans_kor2eng_v1p3(list_or_txt):  # example: ['경', '기', '5', '6', '바', '6', '7', '5', '8'] or '경기56바6758'
+    retval = []
+    for txt in list_or_txt:
+        if txt.isdigit() is False:
+            for f, t in bd_eng2kor_v1p3.inverse.items():
+                txt = txt.replace(f, t)
+        retval.append(txt)
     return retval
 
 
@@ -359,7 +369,7 @@ def iou(bb1, bb2):
     return o
 
 
-def iou_4corner(b1, b2): # 4꼭지점을 이용한 iou
+def iou_4corner(b1, b2):  # 4꼭지점을 이용한 iou
     if 'BBox' in str(b1.__class__):
         b1 = np.float32([(b1.x, b1.y), (b1.x + b1.w, b1.y), (b1.x + b1.w, b1.y + b1.h), (b1.x, b1.y + b1.h)])
     else:
