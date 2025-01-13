@@ -42,7 +42,7 @@ if __name__ == '__main__':
         boxes = []
 
         # VIN_LPD로 검출
-        d_out = d_net.resize_N_forward(img)
+        d_out = d_net.forward(img)
         if d_out:
             d = d_out[0]
             bb_vinlpd = BBox(d.x, d.y, d.w, d.h, class_str=d.class_str, class_idx=d.class_idx)

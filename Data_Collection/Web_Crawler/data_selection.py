@@ -34,11 +34,11 @@ if __name__ == '__main__':
             img = imread_uni(img_path)  # 이미지 로드
             if img is None:
                 continue
-            d_out = d_net.resize_N_forward(img)  # VIN_LPD로 검출
+            d_out = d_net.forward(img)  # VIN_LPD로 검출
             type_ocr_list = []  # 저장 후보 리스트
             for i, bb in enumerate(d_out):
-                crop_resized_img = r_net.crop_resize_with_padding(img, bb)
-                r_out = r_net.resize_N_forward(crop_resized_img)
+                crop_resized_img = r_net.keep_ratio_padding(img, bb)
+                r_out = r_net.forward(crop_resized_img)
                 # for b in r_out:
                 #     cv2.rectangle(crop_resized_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
                 #     font_size = b.w  # magic number

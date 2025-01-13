@@ -36,7 +36,7 @@ def calculate_metrics(d_net, loader, img_paths, prefix, iou_threshold=0.5):
         # 처리 시작 시간 기록
         start_time = time.time()
 
-        d_out = d_net.resize_N_forward(img)  # 예측 결과
+        d_out = d_net.forward(img)  # 예측 결과
 
         # 처리 종료 시간 기록 및 시간 누적
         total_time += time.time() - start_time

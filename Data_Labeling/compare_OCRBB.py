@@ -77,7 +77,7 @@ if __name__ == '__main__':
             img = imread_uni(os.path.join(folder_path, img_path))  # 이미지 로드
             plate_number = img_path.split('_')[-1][:-4]
 
-            r_out = r_net.resize_N_forward(img)
+            r_out = r_net.forward(img)
 
             # Bounding Box visualize
             # visualize_bbox(img, r_out, char_xywh)

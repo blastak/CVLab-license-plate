@@ -16,7 +16,7 @@ class VinOCR(OcvYoloBase):
     def __init__(self, _model_path, _weight_path, _classes_path):
         super().__init__(_model_path, _weight_path, _classes_path, _conf_thresh=0.03, _iou_thresh=0.3, _in_w=inpWidth, _in_h=inpHeight)
 
-    def crop_resize_with_padding(self, img, b, target_width=inpWidth, target_height=inpHeight):
+    def keep_ratio_padding(self, img, b, target_width=inpWidth, target_height=inpHeight):
         if b.x < 0:
             b.w += b.x
             b.x = 0
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     if use_detector:
         img = imread_uni('../../LP_Detection/sample_image/seoulmp4_001036359jpg.jpg')
         d_net = load_model_VinLPD('../../LP_Detection/VIN_LPD/weight/')
-        d_out = d_net.resize_N_forward(img)  # from Detector
+        d_out = d_net.forward(img)  # from Detector
     else:
         prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/파클'
         # prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/용산'
@@ -171,8 +171,8 @@ if __name__ == '__main__':
 
     for i, bb in enumerate(d_out):
         print(f'[P{bb.class_idx + 1}]', end=' ')
-        crop_resized_img = r_net.crop_resize_with_padding(img, bb)
-        r_out = r_net.resize_N_forward(crop_resized_img)
+        crop_resized_img = r_net.keep_ratio_padding(img, bb)
+        r_out = r_net.forward(crop_resized_img)
         for b in r_out:
             cv2.rectangle(crop_resized_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
             font_size = b.w  # magic number

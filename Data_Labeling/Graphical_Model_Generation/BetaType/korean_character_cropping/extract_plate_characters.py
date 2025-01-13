@@ -180,15 +180,15 @@ if __name__ == "__main__":
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
         i_h, i_w = img.shape[:2]
         boxes = []
-        d_out = d_net.resize_N_forward(img)
+        d_out = d_net.forward(img)
         for _, d in enumerate(d_out):
             bb_vinlpd = BBox(d.x, d.y, d.w, d.h, d.class_str, d.class_idx)
             boxes.append(bb_vinlpd)
 
         process = 'continue'
         for _, bb in enumerate(boxes):
-            crop_resized_img = r_net.crop_resize_with_padding(img, bb)  # 글자 인식
-            r_out = r_net.resize_N_forward(crop_resized_img)
+            crop_resized_img = r_net.keep_ratio_padding(img, bb)  # 글자 인식
+            r_out = r_net.forward(crop_resized_img)
             bb.class_idx = 4
             list_char = r_net.check_align(r_out, bb.class_idx + 1)
             list_char_kr = trans_eng2kor_v1p3(list_char)

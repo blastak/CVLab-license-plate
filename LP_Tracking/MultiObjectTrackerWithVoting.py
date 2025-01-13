@@ -91,7 +91,7 @@ if __name__ == '__main__':
         img_disp = img_orig.copy()
 
         # detection
-        d_out = d_net.resize_N_forward(img_orig)
+        d_out = d_net.forward(img_orig)
 
         xyxys = []
         types = []
@@ -101,8 +101,8 @@ if __name__ == '__main__':
             cv2.circle(img_disp, (d.x + d.w // 2, d.y + d.h // 2), 1, (0, 255, 0), 3)
 
             # recognition
-            img_crop = r_net.crop_resize_with_padding(img_orig, d)
-            r_out = r_net.resize_N_forward(img_crop)
+            img_crop = r_net.keep_ratio_padding(img_orig, d)
+            r_out = r_net.forward(img_crop)
             list_char = r_net.check_align(r_out, d.class_idx + 1)
             list_char_kr = trans_eng2kor_v1p3(list_char)
             label = ''.join(list_char_kr)

@@ -182,7 +182,7 @@ class VideoPlayer(QtWidgets.QWidget):
                 st0 = time.time()  #######################
                 # 검출
                 st = time.time()#######################
-                d_out = self.d_net.resize_N_forward(frame)
+                d_out = self.d_net.forward(frame)
                 print('%s: %.1fms' % ('detection', (time.time()-st)*1000) )#######################
 
                 # 인식
@@ -191,8 +191,8 @@ class VideoPlayer(QtWidgets.QWidget):
                 numbers = []
                 for _, d in enumerate(d_out):
                     st = time.time()#######################
-                    img_crop = self.r_net.crop_resize_with_padding(frame, d)
-                    r_out = self.r_net.resize_N_forward(img_crop)
+                    img_crop = self.r_net.keep_ratio_padding(frame, d)
+                    r_out = self.r_net.forward(img_crop)
                     list_char = self.r_net.check_align(r_out, d.class_idx + 1)
                     print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))#######################
                     list_char_kr = trans_eng2kor_v1p3(list_char)

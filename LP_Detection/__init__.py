@@ -42,7 +42,7 @@ class OcvYoloBase:
         self.conf_thresh = _conf_thresh
         self.iou_thresh = _iou_thresh
 
-    def resize_N_forward(self, _img):
+    def forward(self, _img):
         blob = cv2.dnn.blobFromImage(_img, 1 / 255, (self.in_w, self.in_h), [0, 0, 0], True, False)
         self.net.setInput(blob)
         outputs = self.net.forward(self.output_layers)
