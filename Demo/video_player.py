@@ -189,20 +189,22 @@ class VideoPlayer(QtWidgets.QWidget):
                 xyxys = []
                 types = []
                 numbers = []
-                for _, d in enumerate(d_out):
-                    st = time.time()#######################
-                    img_crop = self.r_net.keep_ratio_padding(frame, d)
-                    r_out = self.r_net.forward(img_crop)
-                    list_char = self.r_net.check_align(r_out, d.class_idx + 1)
-                    print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))#######################
+                img_crops = []
+                st = time.time()#######################
+                for d in d_out:
+                    img_crops.append(self.r_net.keep_ratio_padding(frame, d))
+                r_outs = self.r_net.forward(img_crops)
+                for i, r_out in enumerate(r_outs):
+                    list_char = self.r_net.check_align(r_out, d_out[i].class_idx + 1)
                     list_char_kr = trans_eng2kor_v1p3(list_char)
                     label = ''.join(list_char_kr)
 
                     # label이 7이상인 경우만
                     if len(label) >= 7:
-                        types.append(d.class_str)
+                        types.append(d_out[i].class_str)
                         numbers.append(label)
-                        xyxys.append(xywh2xyxy([d.x, d.y, d.w, d.h]))
+                        xyxys.append(xywh2xyxy([d_out[i].x, d_out[i].y, d_out[i].w, d_out[i].h]))
+                print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))#######################
 
                 # 추적
                 st = time.time()#######################
