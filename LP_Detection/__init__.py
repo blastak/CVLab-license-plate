@@ -43,38 +43,46 @@ class OcvYoloBase:
         self.iou_thresh = _iou_thresh
 
     def forward(self, _img):
-        blob = cv2.dnn.blobFromImage(_img, 1 / 255, (self.in_w, self.in_h), [0, 0, 0], True, False)
+        if type(_img) is not list:
+            _img = [_img]
+        # blob = cv2.dnn.blobFromImage(_img, 1 / 255, (self.in_w, self.in_h), [0, 0, 0], True, False)
+        blob = cv2.dnn.blobFromImages(_img, 1 / 255, (self.in_w, self.in_h), [0, 0, 0], True, False)
         self.net.setInput(blob)
         outputs = self.net.forward(self.output_layers)
 
-        boxes = []
-        confidences = []
-        classIDs = []
-        h, w = _img.shape[:2]
+        bs = len(_img)
+        boxes = [[] for _ in range(bs)]
+        confidences = [[] for _ in range(bs)]
+        classIDs = [[] for _ in range(bs)]
 
         for output in outputs:
-            for row in output:
-                scores = row[5:]
-                classID = np.argmax(scores)
-                confidence = scores[classID]
-                if confidence > self.conf_thresh:
-                    box = row[:4] * np.array([w, h, w, h])
-                    (cx, cy, bw, bh) = box.astype("int")
-                    bx = cx - (bw // 2)
-                    by = cy - (bh // 2)
-                    box = [bx, by, int(bw), int(bh)]
-                    boxes.append(box)
-                    confidences.append(float(confidence))
-                    classIDs.append(classID)
+            if len(output.shape) == 2:
+                output = np.expand_dims(output, axis=0)
+            for b, batch in enumerate(output):
+                for row in batch:
+                    scores = row[5:]
+                    classID = np.argmax(scores)
+                    confidence = scores[classID]
+                    if confidence > self.conf_thresh:
+                        h, w = _img[b].shape[:2]
+                        box = row[:4] * np.array([w, h, w, h])
+                        (cx, cy, bw, bh) = box.astype("int")
+                        bx = cx - (bw // 2)
+                        by = cy - (bh // 2)
+                        box = [bx, by, int(bw), int(bh)]
+                        boxes[b].append(box)
+                        confidences[b].append(float(confidence))
+                        classIDs[b].append(classID)
 
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=self.conf_thresh, nms_threshold=self.iou_thresh)
-        bboxes = []
-        if len(indices) > 0:
-            for i in indices.flatten():
-                b = BBox()
-                b.x, b.y, b.w, b.h = boxes[i][:4]
-                b.conf = confidences[i]
-                b.class_idx = classIDs[i]
-                b.class_str = self.classes[classIDs[i]]
-                bboxes.append(b)
-        return bboxes
+        multi_batch_bboxes = [[] for _ in range(bs)]
+        for b in range(bs):
+            indices = list(cv2.dnn.NMSBoxes(boxes[b], confidences[b], score_threshold=self.conf_thresh, nms_threshold=self.iou_thresh))
+            for i in indices:
+                bb = BBox(*boxes[b][i][:4])
+                bb.class_str = self.classes[classIDs[b][i]]
+                bb.class_idx = classIDs[b][i]
+                bb.conf = confidences[b][i]
+                multi_batch_bboxes[b].append(bb)
+        if bs == 1:
+            return multi_batch_bboxes[0]
+        return multi_batch_bboxes

@@ -169,18 +169,21 @@ if __name__ == '__main__':
         plate_type, plate_number, left, top, right, bottom = loader.parse_info(jpg_path[:-4] + '.xml')  # from XML
         d_out = [BBox(left, top, right - left, bottom - top, plate_number, int(plate_type[1:2]) - 1, 1.0)]
 
-    for i, bb in enumerate(d_out):
-        print(f'[P{bb.class_idx + 1}]', end=' ')
+    bbs = []
+    for bb in d_out:
         crop_resized_img = r_net.keep_ratio_padding(img, bb)
-        r_out = r_net.forward(crop_resized_img)
-        for b in r_out:
-            cv2.rectangle(crop_resized_img, (b.x, b.y, b.w, b.h), (255, 255, 0), 1)  # bounding box
-            font_size = b.w  # magic number
-            char = bd_eng2kor_v1p3[b.class_str] if not b.class_str.isdigit() else b.class_str
-            crop_resized_img = add_text_with_background(crop_resized_img, char, position=(b.x, b.y - font_size), font_size=font_size, padding=0).astype(np.uint8)
+        bbs.append(crop_resized_img)
+    r_outs = r_net.forward(bbs)
+    for i, r_out in enumerate(r_outs):
+        print(f'[P{d_out[i].class_idx + 1}]', end=' ')
+        for cb in r_out:
+            cv2.rectangle(bbs[i], (cb.x, cb.y, cb.w, cb.h), (255, 255, 0), 1)  # bounding box
+            font_size = cb.w  # magic number
+            char = bd_eng2kor_v1p3[cb.class_str] if not cb.class_str.isdigit() else cb.class_str
+            bbs[i] = add_text_with_background(bbs[i], char, position=(cb.x, cb.y - font_size), font_size=font_size, padding=0).astype(np.uint8)
             print(char, end='')
-        list_char = r_net.check_align(r_out, bb.class_idx + 1)
+        list_char = r_net.check_align(r_out, d_out[i].class_idx + 1)
         list_char_kr = trans_eng2kor_v1p3(list_char)
         print(' -->', ''.join(list_char_kr))
-        cv2.imshow(''.join(list_char), crop_resized_img)
+        cv2.imshow(''.join(list_char), bbs[i])
         cv2.waitKey()
