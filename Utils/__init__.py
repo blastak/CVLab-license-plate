@@ -389,8 +389,8 @@ def iou_4corner(b1, b2):  # 4꼭지점을 이용한 iou
     area1 = cv2.contourArea(b1)
     area2 = cv2.contourArea(b2)
     union_area = area1 + area2 - inter_area
-    iou = inter_area / union_area if union_area > 0 else 0
-    return iou
+    i = inter_area / union_area if union_area > 0 else 0
+    return i
 
 
 def plate_number_tokenizer(plate_number='서울12가3456'):
