@@ -81,14 +81,10 @@ if __name__ == '__main__':
             # graphical model을 전체 이미지 좌표계로 warping
             img_gen_recon = cv2.warpPerspective(img_gened, mat_T, (i_w, i_h))
 
-            # 해당 영역 mask 생성
-            img_gened_white = np.full_like(img_gened[:, :, 0], 255, dtype=np.uint8)
-            mask_white = cv2.warpPerspective(img_gened_white, mat_T, (i_w, i_h))
-
             # 영상 합성
-            img1 = cv2.bitwise_and(img, img, mask=cv2.bitwise_not(mask_white))
-            img2 = cv2.bitwise_and(img_gen_recon, img_gen_recon, mask=mask_white)
-            img_superimposed = img1 + img2
+            fg_rgb = img_gen_recon[:, :, :3]  # RGB 채널
+            alpha = img_gen_recon[:, :, 3] / 255  # alpha 채널
+            img_superimposed = (alpha[:, :, np.newaxis] * fg_rgb + (1 - alpha[:, :, np.newaxis]) * img).astype(np.uint8)
 
             # 좌표 계산
             dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
