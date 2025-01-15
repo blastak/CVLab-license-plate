@@ -378,7 +378,7 @@ class VideoPlayer(QtWidgets.QWidget):
                     # View 중심에 Pixmap 배치
                     item.setPos((view_width - width * scale) / 2, (view_height - height * scale) / 2)
                 print('%s: %.1fms' % ('display', (time.time() - st) * 1000))  #######################
-                print('%s: %.1fms' % ('whole', (time.time() - st0) * 1000))  #######################
+                print('%s: %.1fms\n' % ('whole', (time.time() - st0) * 1000))  #######################
             else:
                 self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 동영상 반복 재생
 

@@ -36,6 +36,7 @@ class OcvYoloBase:
     def __init__(self, _model_path, _weight_path, _classes_path, _in_w=416, _in_h=416, _conf_thresh=0.5, _iou_thresh=0.5):
         self.classes = open(_classes_path).read().strip().split('\n')
         self.net = cv2.dnn.readNetFromDarknet(_model_path, _weight_path)
+        self.net.enableWinograd(True)
         self.output_layers = [self.net.getLayerNames()[i - 1] for i in self.net.getUnconnectedOutLayers()]
         self.in_w = _in_w
         self.in_h = _in_h
