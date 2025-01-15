@@ -111,7 +111,7 @@ if __name__ == '__main__':
         # frontalization 저장
         save_path = os.path.join(prefix_path, 'front_' + plate_type)
         dst_xy = Quadrilateral(dst_xy[0][0], dst_xy[0][1], dst_xy[0][2], dst_xy[0][3])
-        img_front, mat_A = frontalization(img, dst_xy, generator.plate_wh[0], generator.plate_wh[1], 4)
+        img_front, mat_A = frontalization(img, dst_xy, *generator.plate_wh[plate_type], 4)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         imwrite_uni(os.path.join(save_path, 'front_' + img_path), img_front)

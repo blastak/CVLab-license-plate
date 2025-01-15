@@ -62,7 +62,7 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     prefix_path = opt.data
-    generator = Graphical_Model_Generator_KOR('./Graphical_Model_Generation/BetaType/korean_LP')
+    generator = Graphical_Model_Generator_KOR()
     for folder_name in os.listdir(prefix_path):
         img_paths = []
         folder_path = os.path.join(prefix_path, folder_name)

@@ -29,11 +29,11 @@ def calc_relative_angle(xy1, xy2, xy3, xy4, plate_type, image_width, image_heigh
         list: 번호판의 상대적인 회전 각도 (x, y, z)를 요소로 하는 리스트 (단위: 도)
     """
 
-    if plate_type not in GMG.LP_plate_wh.keys():
+    if plate_type not in GMG.plate_wh.keys():
         raise NotImplementedError
 
     # 3D 상의 점
-    vw, vh = GMG.LP_plate_wh[plate_type]
+    vw, vh = GMG.plate_wh[plate_type]
     vmax = max(vh, vw)
     vh /= vmax
     vw /= vmax
