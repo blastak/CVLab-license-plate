@@ -1,5 +1,6 @@
 import random
 import sys
+import time
 
 import cv2
 import numpy as np
@@ -11,16 +12,15 @@ from PyQt5.QtWidgets import QFileDialog, QGraphicsScene
 from torchvision.utils import make_grid
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from Data_Labeling.find_homography_iteratively import find_total_transformation
 from LP_Detection import BBox
+from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
+from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR import load_model_VinOCR
 from LP_Swapping.models.masked_pix2pix_model import Masked_Pix2pixModel
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
-from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer
+from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer, iou_4corner
 from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
-
-import time
 
 
 class Swapping_Runner():
@@ -113,6 +113,8 @@ class VideoPlayer(QtWidgets.QWidget):
 
         self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
+        self.iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
+
     def center_window(self):
         screen = QtWidgets.QApplication.primaryScreen()  # 기본 화면 가져오기
         available_geometry = screen.availableGeometry()  # 작업 표시줄을 제외한 사용 가능한 영역
@@ -181,33 +183,39 @@ class VideoPlayer(QtWidgets.QWidget):
             if ret:
                 st0 = time.time()  #######################
                 # 검출
-                st = time.time()#######################
+                st = time.time()  #######################
                 d_out = self.d_net.forward(frame)
-                print('%s: %.1fms' % ('detection', (time.time()-st)*1000) )#######################
+                print('%s: %.1fms' % ('detection', (time.time() - st) * 1000))  #######################
+
+                # 검출2
+                parallelograms = find_lp_corner(frame, self.iwpod_tf)
 
                 # 인식
                 xyxys = []
                 types = []
                 numbers = []
                 img_crops = []
-                st = time.time()#######################
+                st = time.time()  #######################
                 for d in d_out:
                     img_crops.append(self.r_net.keep_ratio_padding(frame, d))
-                r_outs = self.r_net.forward(img_crops)
-                for i, r_out in enumerate(r_outs):
-                    list_char = self.r_net.check_align(r_out, d_out[i].class_idx + 1)
-                    list_char_kr = trans_eng2kor_v1p3(list_char)
-                    label = ''.join(list_char_kr)
+                if len(img_crops) != 0:
+                    r_outs = self.r_net.forward(img_crops)
+                    if len(img_crops) != len(r_outs):
+                        r_outs = [r_outs]
+                    for i, r_out in enumerate(r_outs):
+                        list_char = self.r_net.check_align(r_out, d_out[i].class_idx + 1)
+                        list_char_kr = trans_eng2kor_v1p3(list_char)
+                        label = ''.join(list_char_kr)
 
-                    # label이 7이상인 경우만
-                    if len(label) >= 7:
-                        types.append(d_out[i].class_str)
-                        numbers.append(label)
-                        xyxys.append(xywh2xyxy([d_out[i].x, d_out[i].y, d_out[i].w, d_out[i].h]))
-                print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))#######################
+                        # label이 7이상인 경우만
+                        if len(label) >= 7:
+                            types.append(d_out[i].class_str)
+                            numbers.append(label)
+                            xyxys.append(xywh2xyxy([d_out[i].x, d_out[i].y, d_out[i].w, d_out[i].h]))
+                    print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))  #######################
 
                 # 추적
-                st = time.time()#######################
+                st = time.time()  #######################
                 self.tracker.track2(xyxys, types, numbers)
                 print('%s: %.1fms' % ('tracking', (time.time() - st) * 1000))  #######################
 
@@ -234,13 +242,22 @@ class VideoPlayer(QtWidgets.QWidget):
                     cxcywhs.append(xywh2cxcywh(xyxy2xywh(trk.last_xyxy)))
                     types_numbers.append((p_type, p_number))  # 암호화를 위해 저장
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+                    g_h, g_w = img_gened.shape[:2]
                     st = time.time()  #######################
-                    mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
+                    # mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
+                    L = [iou_4corner(bb, qb) for qb in parallelograms]
+                    pt_src = np.float32([[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]])
+                    if len(L) == 0:
+                        x1, y1, x2, y2 = xywh2xyxy([bb.x, bb.y, bb.w, bb.h])
+                        pt_dst = np.float32([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
+                    else:
+                        qb_idx = L.index(max(L))
+                        pt_dst = np.float32(parallelograms[qb_idx])
+                    mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
                     print('%s: %.1fms' % ('Compute Homography', (time.time() - st) * 1000))  #######################
                     mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
                     # 꼭지점 좌표 계산
-                    g_h, g_w = img_gened.shape[:2]
                     st = time.time()  #######################
                     dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
                     print('%s: %.1fms' % ('Find LP corners', (time.time() - st) * 1000))  #######################
