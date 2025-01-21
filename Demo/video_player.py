@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QFileDialog, QGraphicsScene
 from torchvision.utils import make_grid
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
+from Data_Labeling.find_homography_iteratively import find_total_transformation
 from LP_Detection import BBox
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
@@ -113,6 +114,7 @@ class VideoPlayer(QtWidgets.QWidget):
 
         self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
+        self.using_iwpod = True
         self.iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     def center_window(self):
@@ -188,7 +190,10 @@ class VideoPlayer(QtWidgets.QWidget):
                 print('%s: %.1fms' % ('detection', (time.time() - st) * 1000))  #######################
 
                 # 검출2
-                parallelograms = find_lp_corner(frame, self.iwpod_tf)
+                if self.using_iwpod:
+                    st = time.time()  #######################
+                    parallelograms = find_lp_corner(frame, self.iwpod_tf)
+                    print('%s: %.1fms' % ('detection2', (time.time() - st) * 1000))  #######################
 
                 # 인식
                 xyxys = []
@@ -212,7 +217,7 @@ class VideoPlayer(QtWidgets.QWidget):
                             types.append(d_out[i].class_str)
                             numbers.append(label)
                             xyxys.append(xywh2xyxy([d_out[i].x, d_out[i].y, d_out[i].w, d_out[i].h]))
-                    print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))  #######################
+                print('%s: %.1fms' % ('recognition', (time.time() - st) * 1000))  #######################
 
                 # 추적
                 st = time.time()  #######################
@@ -244,16 +249,18 @@ class VideoPlayer(QtWidgets.QWidget):
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     g_h, g_w = img_gened.shape[:2]
                     st = time.time()  #######################
-                    # mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
-                    L = [iou_4corner(bb, qb) for qb in parallelograms]
-                    pt_src = np.float32([[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]])
-                    if len(L) == 0:
-                        x1, y1, x2, y2 = xywh2xyxy([bb.x, bb.y, bb.w, bb.h])
-                        pt_dst = np.float32([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
+                    if self.using_iwpod:
+                        L = [iou_4corner(bb, qb) for qb in parallelograms]
+                        pt_src = np.float32([[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]])
+                        if len(L) == 0:
+                            x1, y1, x2, y2 = xywh2xyxy([bb.x, bb.y, bb.w, bb.h])
+                            pt_dst = np.float32([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
+                        else:
+                            qb_idx = L.index(max(L))
+                            pt_dst = np.float32(parallelograms[qb_idx])
+                        mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
                     else:
-                        qb_idx = L.index(max(L))
-                        pt_dst = np.float32(parallelograms[qb_idx])
-                    mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
+                        mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
                     print('%s: %.1fms' % ('Compute Homography', (time.time() - st) * 1000))  #######################
                     mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
@@ -263,38 +270,25 @@ class VideoPlayer(QtWidgets.QWidget):
                     # print('%s: %.1fms' % ('Find LP corners', (time.time() - st) * 1000))  #######################
                     # dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
 
-                img_cond2 = frame.copy()
                 img_disp2 = frame.copy()
                 types_numbers2 = []
                 for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers)):
                     st = time.time()  #######################
                     new_number = self.encrypt_number(p_type, p_number, self.password1to2)
-                    print('%s: %.1fms' % ('Encrypt LP number', (time.time() - st) * 1000))  #######################
+                    print('#2 %s: %.1fms' % ('Encrypt LP number', (time.time() - st) * 1000))  #######################
                     types_numbers2.append((p_type, new_number))
 
                     st = time.time()  #######################
                     img_gen0 = self.gm_generator.make_LP(new_number, p_type)
-                    print('%s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+                    print('#2 %s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
+
                     st = time.time()  #######################
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
-                    print('%s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
-
                     # 해당 영역 mask 생성
-                    st = time.time()  #######################
                     mask_white = img_gen_recon[:, :, 3]
-                    print('%s: %.1fms' % ('superimposing - mask_white', (time.time() - st) * 1000))  #######################
-
-                    # 영상 합성
-                    st = time.time()  #######################
-                    # fg_rgb = img_gen_recon[:, :, :3]  # RGB 채널
-                    # alpha = img_gen_recon[:, :, 3] / 255  # alpha 채널
-                    # img_cond2 = (alpha[:, :, np.newaxis] * fg_rgb + (1 - alpha[:, :, np.newaxis]) * img_cond2).astype(np.uint8)
-                    img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
-                    img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
-                    img_cond2 = img1 + img2
-                    print('%s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
+                    print('#2 %s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
 
                     # 정방형 crop
                     cx = int(cxcywhs[i][0])
@@ -304,51 +298,55 @@ class VideoPlayer(QtWidgets.QWidget):
                     sq_tb = np.array([cy - margin, cy + margin])
                     if sq_lr[0] < 0:
                         sq_lr -= sq_lr[0]
-                    if img_gen_recon.shape[1] - sq_lr[1] <= 0:
-                        sq_lr += (img_gen_recon.shape[1] - sq_lr[1])
+                    if frame.shape[1] - sq_lr[1] <= 0:
+                        sq_lr += (frame.shape[1] - sq_lr[1])
                     if sq_tb[0] < 0:
                         sq_tb -= sq_tb[0]
-                    if img_gen_recon.shape[0] - sq_tb[1] <= 0:
-                        sq_tb += (img_gen_recon.shape[0] - sq_tb[1])
+                    if frame.shape[0] - sq_tb[1] <= 0:
+                        sq_tb += (frame.shape[0] - sq_tb[1])
 
-                    # A = crop_img_square(img_cond1, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    # B = crop_img_square(frame, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    # M = crop_img_square(mask_white, int(cxcywhs[i][0]), int(cxcywhs[i][1]), margin=int(cxcywhs[i][2]))
-                    A = img_cond2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    # 영상 합성
                     st = time.time()  #######################
+                    # img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
+                    # img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
+                    # img_cond2 = img1 + img2
+                    frame_roi = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    mask_white_roi = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    img_gen_recon_roi = img_gen_recon[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], :3]
+                    img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
+                    img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
+                    print('#2 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
+
+                    st = time.time()  #######################
+                    A = img1 + img2
+                    B = frame_roi
+                    M = mask_white_roi
                     inputs = self.swapper.make_tensor(A, B, M)
-                    print('%s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
+                    print('#2 %s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
+
                     st = time.time()  #######################
                     img_swapped = self.swapper.swap(inputs)
-                    print('%s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
                     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
                     img_disp2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
+                    print('#2 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
-                img_cond3 = frame.copy()
                 img_disp3 = frame.copy()
                 for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers2)):
                     st = time.time()  #######################
                     new_number = self.encrypt_number(p_type, p_number, self.password2to3, reverse=True)
-                    print('%s: %.1fms' % ('Decrypt LP number', (time.time() - st) * 1000))  #######################
+                    print(' #3 %s: %.1fms' % ('Decrypt LP number', (time.time() - st) * 1000))  #######################
 
                     st = time.time()  #######################
                     img_gen0 = self.gm_generator.make_LP(new_number, p_type)
-                    print('%s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+                    print(' #3 %s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
+
                     st = time.time()  #######################
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
-
                     # 해당 영역 mask 생성
                     mask_white = img_gen_recon[:, :, 3]
-
-                    # 영상 합성
-                    img1 = cv2.bitwise_and(img_cond3, img_cond3, mask=cv2.bitwise_not(mask_white))
-                    img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
-                    img_cond3 = img1 + img2
-                    print('%s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
+                    print(' #3 %s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
 
                     # 정방형 crop
                     cx = int(cxcywhs[i][0])
@@ -365,17 +363,27 @@ class VideoPlayer(QtWidgets.QWidget):
                     if img_gen_recon.shape[0] - sq_tb[1] <= 0:
                         sq_tb += (img_gen_recon.shape[0] - sq_tb[1])
 
-                    A = img_cond3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    B = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-                    M = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    # 영상 합성
                     st = time.time()  #######################
+                    frame_roi = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    mask_white_roi = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
+                    img_gen_recon_roi = img_gen_recon[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], :3]
+                    img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
+                    img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
+                    print(' #3 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
+
+                    st = time.time()  #######################
+                    A = img1 + img2
+                    B = frame_roi
+                    M = mask_white_roi
                     inputs = self.swapper.make_tensor(A, B, M)
-                    print('%s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
+                    print(' #3 %s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
+
                     st = time.time()  #######################
                     img_swapped = self.swapper.swap(inputs)
-                    print('%s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
                     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
                     img_disp3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
+                    print(' #3 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
                 displays = [frame, img_disp2, img_disp3]
                 st = time.time()  #######################
@@ -404,6 +412,7 @@ class VideoPlayer(QtWidgets.QWidget):
                 print('%s: %.1fms\n' % ('whole', (time.time() - st0) * 1000))  #######################
             else:
                 self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 동영상 반복 재생
+                self.play_pause_videos()
 
     def get_text_from_editbox(self):
         self.password1to2 = self.editBox1.text()
