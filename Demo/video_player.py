@@ -258,10 +258,10 @@ class VideoPlayer(QtWidgets.QWidget):
                     mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
                     # 꼭지점 좌표 계산
-                    st = time.time()  #######################
-                    dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
-                    print('%s: %.1fms' % ('Find LP corners', (time.time() - st) * 1000))  #######################
-                    dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
+                    # st = time.time()  #######################
+                    # dst_xy = cv2.perspectiveTransform(np.float32([[[0, 0], [g_w, 0], [g_w, g_h], [0, g_h]]]), mat_T)
+                    # print('%s: %.1fms' % ('Find LP corners', (time.time() - st) * 1000))  #######################
+                    # dst_xys.append(dst_xy)  # 복호화 후 superimposing을 위해 저장
 
                 img_cond2 = frame.copy()
                 img_disp2 = frame.copy()
@@ -272,19 +272,25 @@ class VideoPlayer(QtWidgets.QWidget):
                     print('%s: %.1fms' % ('Encrypt LP number', (time.time() - st) * 1000))  #######################
                     types_numbers2.append((p_type, new_number))
 
-                    p_type_temp = 'P1-2' if p_type == 'P1' else p_type
                     st = time.time()  #######################
-                    img_gen0 = self.gm_generator.make_LP(new_number, p_type_temp)
-                    print('%s %s: %.1fms' % ('Make new graphical model', p_type_temp, (time.time() - st) * 1000))  #######################
+                    img_gen0 = self.gm_generator.make_LP(new_number, p_type)
+                    print('%s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
                     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
                     st = time.time()  #######################
                     # graphical model을 전체 이미지 좌표계로 warping
                     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
+                    print('%s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
 
                     # 해당 영역 mask 생성
+                    st = time.time()  #######################
                     mask_white = img_gen_recon[:, :, 3]
+                    print('%s: %.1fms' % ('superimposing - mask_white', (time.time() - st) * 1000))  #######################
 
                     # 영상 합성
+                    st = time.time()  #######################
+                    # fg_rgb = img_gen_recon[:, :, :3]  # RGB 채널
+                    # alpha = img_gen_recon[:, :, 3] / 255  # alpha 채널
+                    # img_cond2 = (alpha[:, :, np.newaxis] * fg_rgb + (1 - alpha[:, :, np.newaxis]) * img_cond2).astype(np.uint8)
                     img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
                     img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
                     img_cond2 = img1 + img2
