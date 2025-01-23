@@ -1,78 +1,93 @@
-# # 비디오 표시하기
-# import gradio as gr
-#
-# def video_display(video_path):
-#     return video_path
-#
-# demo = gr.Interface(video_display, gr.Video(), "video")
-# demo.launch()
-# # 성공, 녹화해서 처리하는 방식, 왜 좌우로 뒤집어지는지 모르겠음
+import os
+import time
+import uuid
 
-
-# import gradio as gr
-#
-# def processing(img):
-#     # return np.fliplr(im)
-#     return img
-#
-# demo = gr.Interface(
-#     processing,
-#     gr.Image(streaming=True),
-#     "image",
-#     live=True
-# )
-# demo.launch()
-# # 성공, 라이브로 output 가능, 근데 조금 느림
-
-
-
-# import uuid
-# import gradio as gr
-# import cv2
-# from time import sleep
-#
-# def v2i(video_path):
-#     vc = cv2.VideoCapture(video_path)
-#     width = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
-#     height = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
-#     vwname = f"output_{uuid.uuid4()}.mp4"
-#     # vw = cv2.VideoWriter(vwname, cv2.VideoWriter.fourcc(*'mp4v'), fps=vc.get(cv2.CAP_PROP_FPS), frameSize=(width, height))
-#     while True:
-#         succ, img = vc.read()
-#         if not succ:
-#             break
-#         # TODO
-#         # vw.write(img)
-#         yield img
-#         sleep(0.01)
-#         # vw = cv2.VideoWriter(vwname, cv2.VideoWriter.fourcc(*'mp4v'), fps=vc.get(cv2.CAP_PROP_FPS), frameSize=(width, height))
-#
-# # demo = gr.Interface(v2i, gr.Video(), "video")
-# demo = gr.Interface(v2i, gr.Video(), gr.Image(), live=True)
-# demo.launch()
-# # 성공, video로 녹화 image로 출력. 근데 버그가 좀 있음 ConnectionResetError: [WinError 10054] 현재 연결은 원격 호스트에 의해 강제로 끊겼습니다
-
-
-# import numpy as np
-# def sepia(input_img):
-#     sepia_filter = np.array([
-#         [0.393, 0.769, 0.189],
-#         [0.349, 0.686, 0.168],
-#         [0.272, 0.534, 0.131]
-#     ])
-#     sepia_img = input_img.dot(sepia_filter.T)
-#     sepia_img /= sepia_img.max()
-#     return sepia_img
-
+import cv2
 import gradio as gr
+# import spaces
 
-def processing(img):
-    return img
+SUBSAMPLE = 2
 
-demo = gr.Interface(
-    processing,
-    gr.Image(streaming=True),
-    "image",
-    live=True
-)
-demo.launch()
+
+# @spaces.GPU
+def stream_object_detection(video, conf_threshold):
+    cap = cv2.VideoCapture(video)
+
+    video_codec = cv2.VideoWriter_fourcc(*"XVID")  # type: ignore
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    desired_fps = fps // SUBSAMPLE
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
+
+    iterating, frame = cap.read()
+
+    n_frames = 0
+    output_path = './streaming'
+    os.makedirs(output_path, exist_ok=True)
+
+    name = os.path.join(output_path, f"output_{uuid.uuid4()}.mp4")
+    segment_file = cv2.VideoWriter(name, video_codec, desired_fps, (width, height))  # type: ignore
+    batch = []
+
+    while iterating:
+        frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if n_frames % SUBSAMPLE == 0:
+            batch.append(frame)
+        if len(batch) == 2 * desired_fps:
+
+            print(f"starting batch of size {len(batch)}")
+            start = time.time()
+
+            for array in batch:
+                # Draw a rectangle on each frame
+                cv2.rectangle(array, (50, 200), (150, 300), (0, 255, 0), 2)
+                frame = array[:, :, ::-1].copy()  # Convert RGB to BGR
+                segment_file.write(frame)
+
+            batch = []
+            segment_file.release()
+            yield name
+            end = time.time()
+            print("time taken for processing boxes", end - start)
+            name = os.path.join(output_path, f"output_{uuid.uuid4()}.mp4")
+            segment_file = cv2.VideoWriter(
+                name, video_codec, desired_fps, (width, height)
+            )  # type: ignore
+
+        iterating, frame = cap.read()
+        n_frames += 1
+
+
+with gr.Blocks() as demo:
+    gr.HTML(
+        """
+    <h1 style='text-align: center'>
+    License plate swapping
+    </h1>
+    """
+    )
+    with gr.Row():
+        with gr.Column():
+            video = gr.Video(label="Video Source")
+            conf_threshold = gr.Slider(
+                label="Confidence Threshold",
+                minimum=0.0,
+                maximum=1.0,
+                step=0.05,
+                value=0.30,
+            )
+        with gr.Column():
+            output_video = gr.Video(
+                label="Processed Video", streaming=True, autoplay=True, loop=True
+            )
+
+    video.upload(
+        fn=stream_object_detection,
+        inputs=[video, conf_threshold],
+        outputs=[output_video],
+    )
+
+if __name__ == "__main__":
+    demo.launch()

@@ -81,7 +81,8 @@ class Demo_Runner():
         self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
         self.using_iwpod = False
-        self.iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
+        if self.using_iwpod:
+            self.iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     def setup(self):
         self.tracker.tracks.clear()

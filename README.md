@@ -6,7 +6,7 @@
 ### conda 세팅
 
 ```bash
-conda create -n CVLab-license-plate python=3.9
+conda create -n CVLab-license-plate python=3.10
 conda activate CVLab-license-plate
 ```
 
@@ -28,7 +28,7 @@ conda install cudatoolkit=11.2 cudnn=8.1.0
 
 ```bash
 pip install --upgrade pip
-pip install "tensorflow<2.11"
+pip install "tensorflow<2.11" numpy==1.22
 ```
 
 * 2.11 부터는 윈도우 native에서 gpu 지원 안함
@@ -37,12 +37,6 @@ pip install "tensorflow<2.11"
 
 ```bash
 python -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
-```
-
-##### 에러해결
-
-```bash
-pip install numpy==1.22
 ```
 
 #### GPU 확인
@@ -103,4 +97,15 @@ pip install pyqt5 pyqt5-tools
 
 ```bash
 pip install tqdm
+```
+
+### gradio
+
+```bash
+pip install gradio
+```
+
+### ffmpeg 설치
+```bash
+conda install -c conda-forge ffmpeg
 ```
