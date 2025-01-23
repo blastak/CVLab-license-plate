@@ -180,7 +180,7 @@ if __name__ == "__main__":
         img = imread_uni(os.path.join(prefix_path, img_path))  # 이미지 로드
         i_h, i_w = img.shape[:2]
         boxes = []
-        d_out = d_net.forward(img)
+        d_out = d_net.forward(img)[0]
         for _, d in enumerate(d_out):
             bb_vinlpd = BBox(d.x, d.y, d.w, d.h, d.class_str, d.class_idx)
             boxes.append(bb_vinlpd)

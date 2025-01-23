@@ -143,7 +143,7 @@ if __name__ == '__main__':
         cnt_continue = 0
 
         # detection
-        d_out = d_net.forward(img_orig)
+        d_out = d_net.forward(img_orig)[0]
 
         img_disp = img_orig.copy()
         xyxys = []

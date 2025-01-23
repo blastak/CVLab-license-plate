@@ -157,7 +157,7 @@ if __name__ == '__main__':
     if use_detector:
         img = imread_uni('../../LP_Detection/sample_image/seoulmp4_001036359jpg.jpg')
         d_net = load_model_VinLPD('../../LP_Detection/VIN_LPD/weight/')
-        d_out = d_net.forward(img)  # from Detector
+        d_out = d_net.forward(img)[0]  # from Detector
     else:
         prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/파클'
         # prefix = '../../Data_Labeling/Dataset_Loader/sample_image_label/용산'

@@ -91,7 +91,7 @@ if __name__ == '__main__':
         img_disp = img_orig.copy()
 
         # detection
-        d_out = d_net.forward(img_orig)
+        d_out = d_net.forward(img_orig)[0]
 
         xyxys = []
         types = []

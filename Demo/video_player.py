@@ -114,7 +114,7 @@ class VideoPlayer(QtWidgets.QWidget):
 
         self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
-        self.using_iwpod = True
+        self.using_iwpod = False
         self.iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
 
     def center_window(self):
@@ -186,7 +186,7 @@ class VideoPlayer(QtWidgets.QWidget):
                 st0 = time.time()  #######################
                 # 검출
                 st = time.time()  #######################
-                d_out = self.d_net.forward(frame)
+                d_out = self.d_net.forward(frame)[0]
                 print('%s: %.1fms' % ('detection', (time.time() - st) * 1000))  #######################
 
                 # 검출2
@@ -205,8 +205,6 @@ class VideoPlayer(QtWidgets.QWidget):
                     img_crops.append(self.r_net.keep_ratio_padding(frame, d))
                 if len(img_crops) != 0:
                     r_outs = self.r_net.forward(img_crops)
-                    if len(img_crops) != len(r_outs):
-                        r_outs = [r_outs]
                     for i, r_out in enumerate(r_outs):
                         list_char = self.r_net.check_align(r_out, d_out[i].class_idx + 1)
                         list_char_kr = trans_eng2kor_v1p3(list_char)

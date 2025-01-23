@@ -84,6 +84,4 @@ class OcvYoloBase:
                 bb.class_idx = classIDs[b][i]
                 bb.conf = confidences[b][i]
                 multi_batch_bboxes[b].append(bb)
-        if bs == 1:
-            return multi_batch_bboxes[0]
         return multi_batch_bboxes

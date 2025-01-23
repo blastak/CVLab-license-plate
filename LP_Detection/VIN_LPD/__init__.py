@@ -20,7 +20,7 @@ def load_model_VinLPD(path_base):
 if __name__ == '__main__':
     d_net = load_model_VinLPD('./weight')
     img = imread_uni('../sample_image/seoulmp4_001036359jpg.jpg')
-    d_out = d_net.forward(img)
+    d_out = d_net.forward(img)[0]
     print(len(d_out))
 
     img_bb = img.copy()

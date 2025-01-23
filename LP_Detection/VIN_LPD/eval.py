@@ -37,7 +37,7 @@ def pred(d_net, loader, img_paths, prefix):
         img = imread_uni(os.path.join(prefix, img_path))
 
         start_time = time.time()
-        d_out = d_net.forward(img)  # d_net 검출
+        d_out = d_net.forward(img)[0]  # d_net 검출
         total_time += time.time() - start_time
 
         # if len(d_out) > 1:  # d_out 두개 이상 일때 사진 확인
