@@ -212,6 +212,7 @@ class Demo_Runner():
             types_numbers2.append((p_type, new_number))
 
             st = time.time()  #######################
+            p_type = 'P1-2' if p_type == 'P1-1' else p_type
             img_gen0 = self.gm_generator.make_LP(new_number, p_type)
             img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
             print('#2 %s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
