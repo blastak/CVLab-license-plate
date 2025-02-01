@@ -18,7 +18,8 @@ def stream_object_detection(video, password):
     fourcc = cv2.VideoWriter_fourcc(*"XVID")  # type: ignore
     fps = int(vc.get(cv2.CAP_PROP_FPS))
 
-    desired_fps = fps // SUBSAMPLE
+    #desired_fps = fps // SUBSAMPLE
+    desired_fps = 5
     w_2 = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
     h_2 = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
 
@@ -80,4 +81,4 @@ with gr.Blocks() as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=False, server_name="0.0.0.0")
