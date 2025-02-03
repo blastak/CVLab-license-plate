@@ -2,6 +2,9 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
+import onnxruntime as ort
+
+from Utils import xyxy2xywh
 
 
 @dataclass
@@ -84,4 +87,57 @@ class OcvYoloBase:
                 bb.class_idx = classIDs[b][i]
                 bb.conf = confidences[b][i]
                 multi_batch_bboxes[b].append(bb)
+        return multi_batch_bboxes
+
+
+class OnnxBase:
+    def __init__(self, model_path, classes_path, in_w=416, in_h=416, conf_thresh=0.5, iou_thresh=0.5):
+        self.classes = open(classes_path).read().strip().split('\n')
+        self.in_w = in_w
+        self.in_h = in_h
+        self.conf_thresh = conf_thresh
+        self.iou_thresh = iou_thresh
+
+        self.session = ort.InferenceSession(model_path, providers=["CUDAExecutionProvider"])
+        self.input_name = self.session.get_inputs()[0].name
+        self.output_names = [output.name for output in self.session.get_outputs()]
+
+    def forward(self, img):
+        if type(img) is not list:
+            img = [img]
+
+        blob = cv2.dnn.blobFromImages(img, 1 / 255.0, (self.in_w, self.in_h), [0, 0, 0], swapRB=True, crop=False)
+        outputs = self.session.run(self.output_names, {self.input_name: blob})
+
+        bs = len(img)
+        boxes = [[] for _ in range(bs)]
+        confidences = [[] for _ in range(bs)]
+        classIDs = [[] for _ in range(bs)]
+
+        for output in outputs:
+            if len(output.shape) == 2:
+                output = np.expand_dims(output, axis=0)
+            for b, batch in enumerate(output):
+                for row in batch:
+                    scores = row[4:]
+                    classID = np.argmax(scores)
+                    confidence = scores[classID]
+                    if confidence > self.conf_thresh:
+                        h, w = img[b].shape[:2]
+                        box = row[:4] * np.array([w, h, w, h])
+                        box2 = xyxy2xywh(box.astype("int"))
+                        boxes[b].append(box2)
+                        confidences[b].append(float(confidence))
+                        classIDs[b].append(classID)
+
+        multi_batch_bboxes = [[] for _ in range(bs)]
+        for b in range(bs):
+            indices = list(cv2.dnn.NMSBoxes(boxes[b], confidences[b], score_threshold=self.conf_thresh, nms_threshold=self.iou_thresh))
+            for i in indices:
+                bb = BBox(*boxes[b][i][:4])
+                bb.class_str = self.classes[classIDs[b][i]]
+                bb.class_idx = classIDs[b][i]
+                bb.conf = confidences[b][i]
+                multi_batch_bboxes[b].append(bb)
+
         return multi_batch_bboxes

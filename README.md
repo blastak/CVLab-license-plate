@@ -109,3 +109,9 @@ pip install gradio
 ```bash
 conda install -c conda-forge ffmpeg
 ```
+
+### onnxruntime-gpu for cuda11.x
+
+```bash
+pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-11/pypi/simple/
+```
