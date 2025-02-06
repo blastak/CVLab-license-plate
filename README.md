@@ -7,6 +7,8 @@
 
 ```bash
 conda create -n CVLab-license-plate python=3.10
+```
+```bash
 conda activate CVLab-license-plate
 ```
 
@@ -23,7 +25,7 @@ conda config --add channels defaults
 conda config --add channels conda-forge
 conda install cudatoolkit=11.2 cudnn=8.1.0
 ```
-    
+
 ### tensorflow 세팅 (by pip) for IWPOD-tf
 
 ```bash
@@ -66,13 +68,13 @@ pip install bidict
 ### OpenCV
 
 ```bash
-pip install opencv-python==4.10.0.84
+pip install numpy==1.22 opencv-python==4.10.0.84
 ```
 
 ### PyTorch with CUDA 11.8
 
 ```bash
-pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu118
+pip install numpy==1.22 torch==2.1.1 torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
 ### MatPlotLib & SciPy
@@ -115,3 +117,25 @@ conda install -c conda-forge ffmpeg
 ```bash
 pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-11/pypi/simple/
 ```
+
+---
+---
+
+
+# 귀찮으면 
+
+환경 만든 후에 한줄씩 복붙
+
+* ~~conda install cudatoolkit=11.2 cudnn=8.1.0~~
+
+* ~~pip install --upgrade pip~~
+
+* ~~pip install "tensorflow<2.11" numpy==1.22 opencv-python==4.10.0.84 selenium webdriver_manager pyautogui pyperclip pytubefix bidict matplotlib scipy natsort pyqt5 pyqt5-tools tqdm gradio~~
+
+* ~~pip install numpy==1.22 torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118~~
+
+* ~~pip install numpy==1.22 onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-11/pypi/simple/~~
+
+* ~~conda install -c conda-forge ffmpeg~~
+
+
