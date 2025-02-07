@@ -1,4 +1,5 @@
 import sys
+import time
 
 import cv2
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
@@ -77,7 +78,9 @@ class VideoPlayer(QtWidgets.QWidget):
         if self.video_capture and self.video_capture.isOpened():
             ret, frame = self.video_capture.read()
             if ret:
+                st = time.time()  #######################
                 img_disp2, img_disp3 = self.demo_runner.loop(frame, self.password1to2, self.password2to3)
+                print('%s: %.1fms' % ('--------------total--------------', (time.time() - st) * 1000))  #######################
 
                 displays = [frame, img_disp2, img_disp3]
                 for i, (scene, disp) in enumerate(zip(self.video_scenes, displays)):

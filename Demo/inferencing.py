@@ -10,11 +10,13 @@ from torchvision.utils import make_grid
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from Data_Labeling.find_homography_iteratively import find_total_transformation
-from LP_Detection import BBox
+from LP_Detection.Bases import BBox
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
-from LP_Detection.VIN_LPD import load_model_VinLPD
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
+from LP_Detection.VIN_LPD_ONNX.VinLPD_Onnx import load_model_VinLPD_Onnx
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
+from LP_Recognition.VIN_OCR_ONNX.VinOCR_Onnx import load_model_VinOCR_Onnx
 from LP_Swapping.models.masked_pix2pix_model import Masked_Pix2pixModel
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
 from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer, iou_4corner
@@ -73,8 +75,14 @@ class Swapping_Runner():
 
 class Demo_Runner():
     def __init__(self):
-        self.d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
-        self.r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
+        using_onnx = True
+        if using_onnx:
+            self.d_net = load_model_VinLPD_Onnx('../LP_Detection/VIN_LPD/weight')  # Onnx 사용 준비
+            self.r_net = load_model_VinOCR_Onnx('../LP_Recognition/VIN_OCR/weight')
+        else:
+            self.d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
+            self.r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
+
         self.tracker = TrackerWithVoting()
         self.gm_generator = Graphical_Model_Generator_KOR()  # 반복문 안에서 객체 생성 시 오버헤드가 발생
 
