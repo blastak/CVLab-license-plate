@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
-from LP_Detection import OnnxBase, BBox
+from LP_Detection.Bases import OnnxBase, BBox
 from LP_Detection.VIN_LPD import load_model_VinLPD
 from Utils import imread_uni, bd_eng2kor_v1p3, add_text_with_background, trans_eng2kor_v1p3
 
