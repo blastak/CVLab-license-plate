@@ -6,11 +6,11 @@ import numpy as np
 
 from Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from LP_Detection import BBox, Quadrilateral
+from LP_Detection.Bases import BBox, Quadrilateral
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
-from LP_Detection.VIN_LPD import load_model_VinLPD
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from Utils import imread_uni, save_json, imwrite_uni, iou_4corner
 from find_homography_iteratively import frontalization
 

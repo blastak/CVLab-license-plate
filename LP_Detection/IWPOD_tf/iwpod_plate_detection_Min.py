@@ -5,7 +5,7 @@ import sys
 import cv2
 import numpy as np
 
-from LP_Detection import BBox
+from LP_Detection.Bases import BBox
 from Utils import imread_uni
 
 sys.path.append(os.path.dirname(__file__))

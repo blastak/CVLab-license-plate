@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_WebCrawl import DatasetLoader_WebCrawl
-from LP_Detection.VIN_LPD import load_model_VinLPD
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
 from Utils import imread_uni, iou, add_text_with_background
 
 

@@ -3,9 +3,9 @@ import os
 import cv2
 import numpy as np
 
-from LP_Detection import BBox
-from LP_Detection.VIN_LPD import load_model_VinLPD
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Detection.Bases import BBox
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from Utils import imread_uni, imwrite_uni, trans_eng2kor_v1p3
 
 # P5

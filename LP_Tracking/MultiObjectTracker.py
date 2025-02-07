@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from LP_Detection.VIN_LPD import load_model_VinLPD
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
 from LP_Tracking.LinearKalmanFilter import LinearKalmanFilter
 from Utils import iou, colors, xywh2xyxy, cxcywh2xywh, cxcysfar2cxcywh, cxcywh2cxcysfar, xywh2cxcywh, xyxy2xywh
 

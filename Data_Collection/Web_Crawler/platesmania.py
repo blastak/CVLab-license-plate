@@ -12,6 +12,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 
+# css selector 받아오기
+def wait_for_elem(driver, selector):
+    try:
+        elem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+    except:
+        elem = None
+    return elem
+
+
 def platesmania(url):
     # 한 페이지당 10개
     pick_car = ['body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(5) > div:nth-child(1) > div > div.panel-body > div:nth-child(1) > a > img',
@@ -32,31 +41,23 @@ def platesmania(url):
     option.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=option)
 
-    # css selector 받아오기
-    def wait_for_elem(selector):
-        try:
-            elem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-        except:
-            elem = None
-        return elem
-
     # url 진입
-    aaa = wait_for_elem('# input')
+    aaa = wait_for_elem(driver, '# input')
     driver.get(url)
 
     # 차량 선택
     while True:
         for i in pick_car:
             # i번째 차량 선택
-            aaa = wait_for_elem(i)
+            aaa = wait_for_elem(driver, i)
             aaa.click()
 
             # 차량 번호 복사
-            aaa = wait_for_elem('body > div.wrapper > div.breadcrumbs > div > div > h1')
+            aaa = wait_for_elem(driver, 'body > div.wrapper > div.breadcrumbs > div > div > h1')
             pyperclip.copy(aaa.text)
 
             # 사진 클릭
-            aaa = wait_for_elem('body > div.wrapper > div.container.content > div:nth-child(1) > div.col-md-6.col-sm-7 > div > div.panel-body > div:nth-child(1) > a > img')
+            aaa = wait_for_elem(driver, 'body > div.wrapper > div.container.content > div:nth-child(1) > div.col-md-6.col-sm-7 > div > div.panel-body > div:nth-child(1) > a > img')
             aaa.click()
             sleep(1.5)
 
@@ -87,10 +88,10 @@ def platesmania(url):
             driver.back()
 
         # 다음 페이지가기
-        aaa = wait_for_elem(next_page)
+        aaa = wait_for_elem(driver, next_page)
         if aaa == None:
             next_page = 'body > div.wrapper > div.container.content > div > div.col-md-9 > div:nth-child(2) > ul > li:nth-child(8) > a'
-            aaa = wait_for_elem(next_page)
+            aaa = wait_for_elem(driver, next_page)
         aaa.click()
 
 

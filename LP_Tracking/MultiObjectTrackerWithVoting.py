@@ -3,8 +3,8 @@ from collections import Counter
 import cv2
 import numpy as np
 
-from LP_Detection.VIN_LPD import load_model_VinLPD
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from LP_Tracking.MultiObjectTracker import Track, Tracker
 from Utils import trans_eng2kor_v1p3, add_text_with_background
 from Utils import xywh2xyxy, cxcywh2xywh, cxcysfar2cxcywh, cxcywh2cxcysfar, xywh2cxcywh, xyxy2xywh

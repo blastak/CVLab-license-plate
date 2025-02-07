@@ -49,7 +49,7 @@ def scrape_electric_car_images(url, plate_type, save_dir):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=option)
 
     # url 진입
-    a = wait_for_elem('# input')
+    a = wait_for_elem(driver, '# input')
     driver.get(url)
 
     n = 2

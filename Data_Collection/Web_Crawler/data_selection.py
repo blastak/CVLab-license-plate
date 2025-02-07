@@ -11,8 +11,8 @@ from pathlib import Path
 from natsort import natsorted
 
 from Data_Collection.Duplicate_Checker import calc_file_hash
-from LP_Detection.VIN_LPD import load_model_VinLPD
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from Utils import imread_uni, trans_eng2kor_v1p3
 
 if __name__ == '__main__':

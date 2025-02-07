@@ -7,7 +7,7 @@ from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
 from Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from LP_Recognition.VIN_OCR import load_model_VinOCR
+from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from Utils import imread_uni, trans_eng2kor_v1p3
 
 
