@@ -143,10 +143,10 @@ class VinOCR_Onnx(OnnxBase):
         return retval
 
 
-def load_model_VinOCR_Onnx(path_base):
+def load_model_VinOCR_Onnx(path_base, suffix=''):
     if path_base[-1] != '/':
         path_base += '/'
-    d_net = VinOCR_Onnx(path_base + 'yolov3-rn83.onnx', path_base + 'yolov3-rn83.names')
+    d_net = VinOCR_Onnx(path_base + 'yolov3-rn83' + suffix + '.onnx', path_base + 'yolov3-rn83.names')
     return d_net
 
 

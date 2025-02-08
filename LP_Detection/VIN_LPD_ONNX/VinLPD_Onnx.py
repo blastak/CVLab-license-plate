@@ -10,10 +10,10 @@ class VinLPD_Onnx(OnnxBase):
         super().__init__(model_path, classes_path, conf_thresh=0.24, iou_thresh=0.3)
 
 
-def load_model_VinLPD_Onnx(path_base):
+def load_model_VinLPD_Onnx(path_base, suffix=''):
     if path_base[-1] != '/':
         path_base += '/'
-    d_net = VinLPD_Onnx(path_base + 'yolov3-feather.onnx', path_base + 'yolov3-feather.names')
+    d_net = VinLPD_Onnx(path_base + 'yolov3-feather' + suffix + '.onnx', path_base + 'yolov3-feather.names')
     return d_net
 
 
