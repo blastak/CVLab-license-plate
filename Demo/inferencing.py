@@ -110,8 +110,11 @@ class Demo_Runner():
         tokens = plate_number_tokenizer(p_number)
         new_tokens = []
         if p_type in ['P3', 'P4', 'P5']:
-            i0 = kor_complete_form[p_type + 'prov'].index(tokens[0])
-            j0 = (i0 + adder) % len(kor_complete_form[p_type + 'prov'])
+            try:
+                i0 = kor_complete_form[p_type + 'prov'].index(tokens[0])
+                j0 = (i0 + adder) % len(kor_complete_form[p_type + 'prov'])
+            except:
+                j0 = 0
             new_tokens.append(kor_complete_form[p_type + 'prov'][j0])
         for ch in ''.join(tokens[1:]):
             if ch.isdigit():
@@ -119,14 +122,19 @@ class Demo_Runner():
                 j0 = (i0 + adder) % 10
                 new_tokens.append(str(j0))
             else:
-                i0 = kor_complete_form[p_type].index(ch)
-                j0 = (i0 + adder) % len(kor_complete_form[p_type])
+                try:
+                    i0 = kor_complete_form[p_type].index(ch)
+                    j0 = (i0 + adder) % len(kor_complete_form[p_type])
+                except:
+                    j0 = 0
                 new_tokens.append(kor_complete_form[p_type][j0])
 
         new_number = ''.join(new_tokens)
         return new_number
 
     def loop(self, frame, password1to2, password2to3):
+        st0 = time.time()  #######################
+
         # 검출
         st = time.time()  #######################
         d_out = self.d_net.forward(frame)[0]
@@ -326,5 +334,7 @@ class Demo_Runner():
         #     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
         #     img_disp3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
         #     print(' #3 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
+
+        print('%s: %.1fms' % ('--------------total--------------', (time.time() - st0) * 1000))  #######################
 
         return img_disp2, img_disp3

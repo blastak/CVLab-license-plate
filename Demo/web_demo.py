@@ -18,10 +18,10 @@ def stream_object_detection(video, password):
     fourcc = cv2.VideoWriter_fourcc(*"XVID")  # type: ignore
     fps = int(vc.get(cv2.CAP_PROP_FPS))
 
-    #desired_fps = fps // SUBSAMPLE
-    desired_fps = 5
-    w_2 = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
-    h_2 = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
+    desired_fps = fps // SUBSAMPLE
+    # desired_fps = 5
+    w_2 = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h_2 = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     retval, img = vc.read()
 
@@ -39,7 +39,7 @@ def stream_object_detection(video, password):
         if n_frames % SUBSAMPLE == 0:
             img = cv2.resize(img, (w_2, h_2))
             batch.append(img)
-        if len(batch) == 2 * desired_fps:
+        if len(batch) >= desired_fps // 2:
             for b in batch:
                 img2, img3 = demo_runner.loop(b, password, password)
                 vw.write(img2)
@@ -67,7 +67,7 @@ with gr.Blocks() as demo:
     )
     with gr.Row():
         with gr.Column():
-            video = gr.Video(label="Video Source")
+            video = gr.Video(label="Video Source", autoplay=True, loop=True)
             box = gr.Textbox(label='password for encryption', value='1q2w3e')
         with gr.Column():
             output_video = gr.Video(
