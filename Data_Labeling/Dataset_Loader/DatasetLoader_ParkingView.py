@@ -38,6 +38,7 @@ class DatasetLoader_ParkingView:
             plate_type = 'P0'
             plate_number = xml_path[:-4].split(sep='_')[-1]
         plate_type = 'P1-1' if plate_type == 'P1' else plate_type  # P1 일 경우 P1-1 로 변경
+        plate_number = plate_number if len(plate_number)>=7 else xml_path[:-4].split(sep='_')[-1] # Label 없으면 파일명에서 가져오기
         return plate_type, plate_number, left, top, right, bottom
 
 
