@@ -3,10 +3,6 @@ import time
 
 import cv2
 import numpy as np
-import torch
-import torchvision.transforms as transforms
-from PIL import Image
-from torchvision.utils import make_grid
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from Data_Labeling.find_homography_iteratively import find_total_transformation
@@ -17,63 +13,14 @@ from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
 from LP_Detection.VIN_LPD_ONNX.VinLPD_Onnx import load_model_VinLPD_Onnx
 from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from LP_Recognition.VIN_OCR_ONNX.VinOCR_Onnx import load_model_VinOCR_Onnx
-from LP_Swapping.models.masked_pix2pix_model import Masked_Pix2pixModel
+from LP_Swapping.swap import Swapper
+from LP_Swapping.utils import crop_img_square
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
 from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer, iou_4corner
 from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
 
 
-class Swapping_Runner():
-    image_width = 256
-    tf_img = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((image_width, image_width), antialias=True),
-        transforms.Normalize([0.5] * 3, [0.5] * 3)
-    ])
-    tf_mask = transforms.Compose([
-        transforms.Grayscale(),
-        transforms.ToTensor(),
-        transforms.Resize((image_width, image_width), antialias=True),
-        transforms.Normalize([0.5], [0.5])
-    ])
-
-    def __init__(self, ckpt_path):
-        ########## torch environment settings
-        gpu_ids = [0]
-        self.device = torch.device('cuda:%d' % gpu_ids[0] if (torch.cuda.is_available() and len(gpu_ids) > 0) else 'cpu')
-        torch.set_default_device(self.device)  # working on torch>2.0.0
-        if torch.cuda.is_available() and len(gpu_ids) > 1:
-            torch.multiprocessing.set_start_method('spawn')
-        ########## model settings
-        self.model = Masked_Pix2pixModel(4, 3, gpu_ids)
-        self.model.load_checkpoints(ckpt_path)
-        self.model.eval()
-
-    def make_tensor(self, A, B, M):
-        A_ = Image.fromarray(A)
-        B_ = Image.fromarray(B)
-        M_ = Image.fromarray(M)
-        t_cond = self.tf_img(A_)
-        t_real = self.tf_img(B_)
-        t_mask = self.tf_mask(M_)
-        t_cond = torch.cat((t_cond, t_mask), dim=0)
-
-        t_cond = torch.unsqueeze(t_cond, dim=0)
-        t_real = torch.unsqueeze(t_real, dim=0)
-        sample = {'condition_image': t_cond, 'real_image': t_real}
-        return sample
-
-    def swap(self, inputs):
-        self.model.input_data(inputs)
-        self.model.testing()
-        detached = self.model.fake_image.detach().cpu()
-        bs = 1
-        montage = make_grid(detached, nrow=int(bs ** 0.5), normalize=True).permute(1, 2, 0).numpy()
-        montage = cv2.normalize(montage, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F).astype(np.uint8)
-        return montage
-
-
-class Demo_Runner():
+class Demo_Runner:
     def __init__(self):
         using_onnx = True
         if using_onnx:
@@ -86,7 +33,7 @@ class Demo_Runner():
         self.tracker = TrackerWithVoting()
         self.gm_generator = Graphical_Model_Generator_KOR()  # 반복문 안에서 객체 생성 시 오버헤드가 발생
 
-        self.swapper = Swapping_Runner('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
+        self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
 
         self.using_iwpod = False
         if self.using_iwpod:
@@ -244,25 +191,15 @@ class Demo_Runner():
             cx = int(cxcywhs[i][0])
             cy = int(cxcywhs[i][1])
             margin = int(cxcywhs[i][2])
-            sq_lr = np.array([cx - margin, cx + margin])
-            sq_tb = np.array([cy - margin, cy + margin])
-            if sq_lr[0] < 0:
-                sq_lr -= sq_lr[0]
-            if frame.shape[1] - sq_lr[1] <= 0:
-                sq_lr += (frame.shape[1] - sq_lr[1])
-            if sq_tb[0] < 0:
-                sq_tb -= sq_tb[0]
-            if frame.shape[0] - sq_tb[1] <= 0:
-                sq_tb += (frame.shape[0] - sq_tb[1])
+            frame_roi, tblr = crop_img_square(frame, cx, cy, margin)
 
             # 영상 합성
             st = time.time()  #######################
             # img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
             # img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
             # img_cond2 = img1 + img2
-            frame_roi = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-            mask_white_roi = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-            img_gen_recon_roi = img_gen_recon[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], :3]
+            mask_white_roi = mask_white[tblr[0]:tblr[1], tblr[2]:tblr[3], ...]
+            img_gen_recon_roi = img_gen_recon[tblr[0]:tblr[1], tblr[2]:tblr[3], :3]
             img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
             img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
             print('#2 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
@@ -277,7 +214,7 @@ class Demo_Runner():
             st = time.time()  #######################
             img_swapped = self.swapper.swap(inputs)
             img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
-            img_disp2[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
+            img_disp2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
             print('#2 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
         img_disp3 = frame.copy()
@@ -302,16 +239,6 @@ class Demo_Runner():
         #     cx = int(cxcywhs[i][0])
         #     cy = int(cxcywhs[i][1])
         #     margin = int(cxcywhs[i][2])
-        #     sq_lr = np.array([cx - margin, cx + margin])
-        #     sq_tb = np.array([cy - margin, cy + margin])
-        #     if sq_lr[0] < 0:
-        #         sq_lr -= sq_lr[0]
-        #     if img_gen_recon.shape[1] - sq_lr[1] <= 0:
-        #         sq_lr += (img_gen_recon.shape[1] - sq_lr[1])
-        #     if sq_tb[0] < 0:
-        #         sq_tb -= sq_tb[0]
-        #     if img_gen_recon.shape[0] - sq_tb[1] <= 0:
-        #         sq_tb += (img_gen_recon.shape[0] - sq_tb[1])
         #
         #     # 영상 합성
         #     st = time.time()  #######################

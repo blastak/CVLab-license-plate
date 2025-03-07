@@ -48,4 +48,4 @@ def crop_img_square(big_img, cx: int, cy: int, margin: int = 360):
         sq_tb += (big_img.shape[0] - sq_tb[1])
 
     small_img = big_img[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...].copy()
-    return small_img
+    return small_img, [sq_tb[0], sq_tb[1], sq_lr[0], sq_lr[1]]
