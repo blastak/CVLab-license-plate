@@ -88,7 +88,7 @@ if __name__ == '__main__':
         print('x:%-10.2f y:%-10.2f z:%-10.2f' % tuple(angle_xyz))
 
         img_disp = img_orig.copy()
-        cv2.rectangle(img_disp, (left, top), (right, bottom), (255, 255, 0), 3)  # bounding box
+        cv2.rectangle(img_disp, (int(left), int(top)), (int(right), int(bottom)), (255, 255, 0), 3)  # bounding box
         cv2.polylines(img_disp, [np.int32([xy1, xy2, xy3, xy4])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
         font_size = (right - left) // 5  # magic number
         img_disp = add_text_with_background(img_disp, plate_number, position=(left, top - font_size), font_size=font_size, padding=0)

@@ -210,7 +210,7 @@ def evaluation(img_paths, prefix):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default='../sample_image/testset', help='Input Image folder')
     opt = parser.parse_args()
 
     prefix = opt.data

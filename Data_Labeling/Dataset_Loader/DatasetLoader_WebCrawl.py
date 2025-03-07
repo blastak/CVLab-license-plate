@@ -20,7 +20,7 @@ class DatasetLoader_WebCrawl:
 
     def parse_json(self, json_path):
         def value_mapping(xy_: list, spoints: list, j: int, left, top, right, bottom):
-            xy_ += map(round, spoints[j])
+            xy_ += map(float, spoints[j])
             left = xy_[0] if xy_[0] <= left else left
             top = xy_[1] if xy_[1] <= top else top
             right = xy_[0] if xy_[0] >= right else right
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(jpg_path[:-4] + '.json')
 
         img_with_label = img.copy()
-        cv2.rectangle(img_with_label, (left, top), (right, bottom), (255, 255, 0), 3)  # bounding box
+        cv2.rectangle(img_with_label, (int(left), int(top)), (int(right), int(bottom)), (255, 255, 0), 3)  # bounding box
         cv2.polylines(img_with_label, [np.int32([xy1, xy2, xy3, xy4])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
         font_size = (right - left) // 5  # magic number
         img_with_label = add_text_with_background(img_with_label, plate_number, position=(left, top - font_size), font_size=font_size, padding=0)
