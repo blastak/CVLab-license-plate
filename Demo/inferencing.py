@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from Data_Labeling.find_homography_iteratively import find_total_transformation
+from Data_Labeling.find_homography_iteratively import find_total_transformation_3points
 from LP_Detection.Bases import BBox
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
@@ -156,7 +156,7 @@ class Demo_Runner:
                     pt_dst = np.float32(parallelograms[qb_idx])
                 mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
             else:
-                mat_T = find_total_transformation(img_gened, self.gm_generator, p_type, frame, bb)
+                mat_T = find_total_transformation_3points(img_gened, self.gm_generator, p_type, frame, bb)
             print('%s: %.1fms' % ('Compute Homography', (time.time() - st) * 1000))  #######################
             mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
@@ -198,8 +198,8 @@ class Demo_Runner:
             # img1 = cv2.bitwise_and(img_cond2, img_cond2, mask=cv2.bitwise_not(mask_white))
             # img2 = cv2.bitwise_and(img_gen_recon[:, :, :3], img_gen_recon[:, :, :3], mask=mask_white)
             # img_cond2 = img1 + img2
-            mask_white_roi = mask_white[tblr[0]:tblr[1], tblr[2]:tblr[3], ...]
-            img_gen_recon_roi = img_gen_recon[tblr[0]:tblr[1], tblr[2]:tblr[3], :3]
+            mask_white_roi, _ = crop_img_square(mask_white, cx, cy, margin)
+            img_gen_recon_roi, _ = crop_img_square(img_gen_recon[:, :, :3], cx, cy, margin)
             img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
             img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
             print('#2 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
@@ -213,8 +213,12 @@ class Demo_Runner:
 
             st = time.time()  #######################
             img_swapped = self.swapper.swap(inputs)
-            img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
+            # img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
+            img_swapped_unshrink = cv2.resize(img_swapped, (tblr[3] - tblr[2], tblr[1] - tblr[0]))
+            # try:
             img_disp2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
+            # except Exception as e:
+            #     pass
             print('#2 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
         img_disp3 = frame.copy()

@@ -35,17 +35,48 @@ def cvt_args2str(d: dict):
     return msg
 
 
-def crop_img_square(big_img, cx: int, cy: int, margin: int = 360):
-    sq_lr = np.array([cx - margin, cx + margin])
-    sq_tb = np.array([cy - margin, cy + margin])
-    if sq_lr[0] < 0:
-        sq_lr -= sq_lr[0]
-    if big_img.shape[1] - sq_lr[1] <= 0:
-        sq_lr += (big_img.shape[1] - sq_lr[1])
-    if sq_tb[0] < 0:
-        sq_tb -= sq_tb[0]
-    if big_img.shape[0] - sq_tb[1] <= 0:
-        sq_tb += (big_img.shape[0] - sq_tb[1])
+def crop_img_square(big_img, cx, cy, margin=128):
+    """
+    중심 좌표 (cx, cy)를 기준으로 좌우 margin 만큼의 정사각형 영역을 crop 합니다.
+    만약 이미지 크기가 부족한 경우, zero padding을 적용하여 정사각형 사이즈를 유지합니다.
 
-    small_img = big_img[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...].copy()
-    return small_img, [sq_tb[0], sq_tb[1], sq_lr[0], sq_lr[1]]
+    Parameters:
+        big_img (numpy.ndarray): 입력 이미지
+        cx (int): 중심 x좌표
+        cy (int): 중심 y좌표
+        margin (int): 좌우 margin 값 (출력 크기는 margin*2 x margin*2)
+
+    Returns:
+        numpy.ndarray: 정사각형 crop 이미지 (zero padding 포함 가능)
+    """
+    h, w = big_img.shape[:2]
+    size = margin * 2
+
+    # Crop 영역의 좌표 계산
+    x1 = cx - margin
+    y1 = cy - margin
+    x2 = cx + margin
+    y2 = cy + margin
+
+    # 출력 이미지를 위한 빈 배열 생성 (zero padding용)
+    c = big_img.shape[-1] if big_img.ndim == 3 else 1
+    crop = np.zeros((size, size, c), dtype=big_img.dtype).squeeze()
+
+    # 실제 이미지 내에 존재하는 영역 계산
+    left = max(x1, 0)
+    top = max(y1, 0)
+    right = min(x2, w)
+    bottom = min(y2, h)
+
+    # crop 이미지 내에서 복사할 위치 계산
+    x1_crop = left - x1
+    y1_crop = top - y1
+    x2_crop = x1_crop + (right - left)
+    y2_crop = y1_crop + (bottom - top)
+
+    # 이미지 복사
+    crop[y1_crop:y2_crop, x1_crop:x2_crop, ...] = big_img[top:bottom, left:right, ...]
+
+    tblr = [top, bottom, left, right]
+
+    return crop, tblr
