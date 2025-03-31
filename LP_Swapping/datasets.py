@@ -13,7 +13,7 @@ IMG_EXTENSIONS = [
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, image_path_list):
-        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix in IMG_EXTENSIONS)
+        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix.lower() in IMG_EXTENSIONS)
 
 
 class CondRealDataset(torch.utils.data.Dataset):
@@ -27,7 +27,7 @@ class CondRealDataset(torch.utils.data.Dataset):
     def __init__(self, image_path_list):
         # self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*.jpg'))
         # self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix == '.jpg')
-        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix in IMG_EXTENSIONS)
+        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix.lower() in IMG_EXTENSIONS)
 
     def __len__(self):
         return len(self.image_path_list)
@@ -64,7 +64,7 @@ class CondRealMaskDataset(torch.utils.data.Dataset):
     def __init__(self, image_path_list):
         # self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*.jpg'))
         # self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix == '.jpg')
-        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix in IMG_EXTENSIONS)
+        self.image_path_list = natsorted(p.absolute() for p in Path(image_path_list).glob('**/*') if p.suffix.lower() in IMG_EXTENSIONS)
 
     def __len__(self):
         return len(self.image_path_list)
