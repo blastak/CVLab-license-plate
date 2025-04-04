@@ -65,16 +65,25 @@ if __name__ == '__main__':
     save_log(save_dir, '\n' + str(model) + '\n\n')
 
     ########## training process
+    min_loss_G = 9999999
     for epoch in range(1, args.epochs + 1):
+        sum_loss_G = 0
         with tqdm(train_loader, unit='batch') as tq:
             for inputs in tq:
                 model.input_data(inputs)
                 model.learning()
 
                 tq.set_description(f'Epoch {epoch}/{args.epochs}')
-                tq.set_postfix(model.get_current_loss())
+                dic = model.get_current_loss()
+                tq.set_postfix(dic)
+                sum_loss_G += dic['loss_G']
             save_log(save_dir, str(tq))
 
+        if min_loss_G > sum_loss_G != 0:
+            ckpt_path = os.path.join(save_dir, 'ckpt_best_loss_G.pth')
+            model.save_checkpoints(ckpt_path)
+            save_log(save_dir, 'best loss G @ epoch%06d' % epoch)
+            min_loss_G = sum_loss_G
         if epoch % args.save_freq == 0:
             ckpt_path = os.path.join(save_dir, 'ckpt_epoch%06d.pth' % epoch)
             model.save_checkpoints(ckpt_path)
