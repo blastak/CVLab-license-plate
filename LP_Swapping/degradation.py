@@ -14,6 +14,15 @@ from Utils import imread_uni, imwrite_uni
 from utils import crop_img_square
 from LP_Swapping.swap import Swapper
 
+def pixelate_image(img, pixel_size=10):
+    # 원본 크기 저장
+    height, width = img.shape[:2]
+
+    # 작은 크기로 축소 후 다시 원래 크기로 확대
+    small = cv2.resize(img, (width // pixel_size, height // pixel_size), interpolation=cv2.INTER_LINEAR)
+    pixelated = cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
+    return pixelated
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\55_WebPlatemania_1944\55_WebPlatemania_jpg_json\good_all", help='source folder')
@@ -31,7 +40,8 @@ if __name__ == "__main__":
 
     # swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try005_server/ckpt_best_loss_G.pth')
     # pdst = Path(DST_DIR).absolute() / 'encrypted'
-    pdst = Path(DST_DIR).absolute() / 'blur'
+    # pdst = Path(DST_DIR).absolute() / 'gaussian_19'
+    pdst = Path(DST_DIR).absolute() / 'pixelated_15'
     pdst.mkdir(parents=True, exist_ok=True)
 
     generator = Graphical_Model_Generator_KOR()
@@ -47,7 +57,8 @@ if __name__ == "__main__":
         top = int(max(top - ph / 4, 0))
         right = int(min(right + pw / 8, frame.shape[1]))
         bottom = int(min(bottom + ph / 4, frame.shape[0]))
-        frame2[top:bottom, left:right, ...] = cv2.GaussianBlur(frame[top:bottom, left:right, ...], (0, 0), 19)
+        # frame2[top:bottom, left:right, ...] = cv2.GaussianBlur(frame[top:bottom, left:right, ...], (0, 0), 19)
+        frame2[top:bottom, left:right, ...] = pixelate_image(frame[top:bottom, left:right, ...],15)
         # cv2.imshow('frame2', frame2)
         # cv2.waitKey(0)
 
