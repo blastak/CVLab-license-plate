@@ -1,4 +1,3 @@
-import random
 import time
 
 import cv2
@@ -16,7 +15,8 @@ from LP_Recognition.VIN_OCR_ONNX.VinOCR_Onnx import load_model_VinOCR_Onnx
 from LP_Swapping.swap import Swapper
 from LP_Swapping.utils import crop_img_square
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
-from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer, iou_4corner
+from Utils import encrypt_number
+from Utils import trans_eng2kor_v1p3, iou_4corner
 from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
 
 
@@ -33,7 +33,8 @@ class Demo_Runner:
         self.tracker = TrackerWithVoting()
         self.gm_generator = Graphical_Model_Generator_KOR()  # 반복문 안에서 객체 생성 시 오버헤드가 발생
 
-        self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
+        # self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
+        self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try005_server/ckpt_best_loss_G.pth')
 
         self.using_iwpod = False
         if self.using_iwpod:
@@ -41,43 +42,6 @@ class Demo_Runner:
 
     def setup(self):
         self.tracker.tracks.clear()
-
-    def encrypt_number(self, p_type, p_number, password, reverse=False):
-        if password == '':
-            return p_number
-
-        random.seed(password)
-        while True:
-            adder = random.randint(100, 999999)
-            if adder % 10 != 0:
-                break
-        if reverse:
-            adder = -adder
-
-        tokens = plate_number_tokenizer(p_number)
-        new_tokens = []
-        if p_type in ['P3', 'P4', 'P5']:
-            try:
-                i0 = kor_complete_form[p_type + 'prov'].index(tokens[0])
-                j0 = (i0 + adder) % len(kor_complete_form[p_type + 'prov'])
-            except:
-                j0 = 0
-            new_tokens.append(kor_complete_form[p_type + 'prov'][j0])
-        for ch in ''.join(tokens[1:]):
-            if ch.isdigit():
-                i0 = int(ch)
-                j0 = (i0 + adder) % 10
-                new_tokens.append(str(j0))
-            else:
-                try:
-                    i0 = kor_complete_form[p_type].index(ch)
-                    j0 = (i0 + adder) % len(kor_complete_form[p_type])
-                except:
-                    j0 = 0
-                new_tokens.append(kor_complete_form[p_type][j0])
-
-        new_number = ''.join(new_tokens)
-        return new_number
 
     def loop(self, frame, password1to2, password2to3):
         st0 = time.time()  #######################
@@ -170,7 +134,7 @@ class Demo_Runner:
         types_numbers2 = []
         for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers)):
             st = time.time()  #######################
-            new_number = self.encrypt_number(p_type, p_number, password1to2)
+            new_number = encrypt_number(p_type, p_number, password1to2)
             print('#2 %s: %.1fms' % ('Encrypt LP number', (time.time() - st) * 1000))  #######################
             types_numbers2.append((p_type, new_number))
 
@@ -224,7 +188,7 @@ class Demo_Runner:
         img_disp3 = frame.copy()
         # for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers2)):
         #     st = time.time()  #######################
-        #     new_number = self.encrypt_number(p_type, p_number, password2to3, reverse=True)
+        #     new_number = encrypt_number(p_type, p_number, password2to3, reverse=True)
         #     print(' #3 %s: %.1fms' % ('Decrypt LP number', (time.time() - st) * 1000))  #######################
         #
         #     st = time.time()  #######################

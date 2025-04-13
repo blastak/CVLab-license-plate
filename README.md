@@ -118,6 +118,11 @@ conda install -c conda-forge ffmpeg
 pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-11/pypi/simple/
 ```
 
+### pyffx 설치
+```bash
+pip install pyffx
+```
+
 ---
 ---
 
@@ -130,7 +135,7 @@ pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/Pu
 
 * ~~pip install --upgrade pip~~
 
-* ~~pip install "tensorflow<2.11" numpy==1.22 opencv-python==4.10.0.84 selenium webdriver_manager pyautogui pyperclip pytubefix bidict matplotlib scipy natsort pyqt5 pyqt5-tools tqdm gradio~~
+* ~~pip install "tensorflow<2.11" numpy==1.22 opencv-python==4.10.0.84 selenium webdriver_manager pyautogui pyperclip pytubefix bidict matplotlib scipy natsort pyqt5 pyqt5-tools tqdm gradio pyffx~~
 
 * ~~pip install numpy==1.22 torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118~~
 
