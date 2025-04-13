@@ -10,7 +10,7 @@ from Data_Labeling.Dataset_Loader.DatasetLoader_WebCrawl import DatasetLoader_We
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from Data_Labeling.find_homography_iteratively import find_total_transformation_4points
 from LP_Detection.Bases import Quadrilateral
-from Utils import imread_uni, imwrite_uni
+from Utils import imread_uni, imwrite_uni, encrypt_number
 from utils import crop_img_square
 from LP_Swapping.swap import Swapper
 
@@ -38,10 +38,8 @@ if __name__ == "__main__":
     json_paths = natsorted(p.absolute() for p in psrc.glob('**/*') if p.suffix.lower() in ['.json'])
     assert len(jpg_paths) == len(json_paths)
 
-    # swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try005_server/ckpt_best_loss_G.pth')
-    # pdst = Path(DST_DIR).absolute() / 'encrypted'
-    # pdst = Path(DST_DIR).absolute() / 'gaussian_19'
-    pdst = Path(DST_DIR).absolute() / 'pixelated_15'
+    swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try005_server/ckpt_best_loss_G.pth')
+    pdst = Path(DST_DIR).absolute() / 'encrypted'
     pdst.mkdir(parents=True, exist_ok=True)
 
     generator = Graphical_Model_Generator_KOR()
@@ -51,52 +49,44 @@ if __name__ == "__main__":
         frame2 = frame.copy()
 
         plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(json_path)
-        pw = right - left
-        ph = bottom - top
-        left = int(max(left - pw / 8, 0))
-        top = int(max(top - ph / 4, 0))
-        right = int(min(right + pw / 8, frame.shape[1]))
-        bottom = int(min(bottom + ph / 4, frame.shape[0]))
-        # frame2[top:bottom, left:right, ...] = cv2.GaussianBlur(frame[top:bottom, left:right, ...], (0, 0), 19)
-        frame2[top:bottom, left:right, ...] = pixelate_image(frame[top:bottom, left:right, ...],15)
-        # cv2.imshow('frame2', frame2)
-        # cv2.waitKey(0)
 
-        # img_gen2x = generator.make_LP(plate_number, plate_type)
-        # img_gen1x = cv2.resize(img_gen2x, None, fx=0.5, fy=0.5)
-        #
-        # # superimposing
-        # qb = Quadrilateral(xy1, xy2, xy3, xy4)
-        # mat_T = find_total_transformation_4points(img_gen1x, generator, plate_type, frame, qb)
-        # img_gen1x_recon = cv2.warpPerspective(img_gen1x, mat_T, frame.shape[1::-1])
-        # mask_white = img_gen1x_recon[:, :, 3]
-        #
-        # cx = int((left + right) / 2)
-        # cy = int((top + bottom) / 2)
-        # margin = int(right - left)
-        # frame_roi, tblr = crop_img_square(frame, cx, cy, margin)
-        # mask_white_roi, _ = crop_img_square(mask_white, cx, cy, margin)
-        # img_gen_roi, _ = crop_img_square(img_gen1x_recon[:, :, :3], cx, cy, margin)
-        # img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
-        # img2 = cv2.bitwise_and(img_gen_roi, img_gen_roi, mask=mask_white_roi)
-        #
-        # A = img1 + img2
-        # B = frame_roi
-        # M = cv2.cvtColor(mask_white_roi, cv2.COLOR_GRAY2BGR)
-        #
-        # inputs = swapper.make_tensor(A, B, M)
-        #
-        # img_swapped = swapper.swap(inputs)
-        # img_swapped_unshrink = cv2.resize(img_swapped, (tblr[3] - tblr[2], tblr[1] - tblr[0]))
-        #
-        # try:
-        #     frame2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
-        # except:
-        #     print('error', jpg_path.name)
-        #     continue
+        enc_number = encrypt_number(plate_type, plate_number, 'cvlab', False)
+
+        img_gen2x = generator.make_LP(enc_number, plate_type)
+        img_gen1x = cv2.resize(img_gen2x, None, fx=0.5, fy=0.5)
+
+        # superimposing
+        qb = Quadrilateral(xy1, xy2, xy3, xy4)
+        mat_T = find_total_transformation_4points(img_gen1x, generator, plate_type, frame, qb)
+        img_gen1x_recon = cv2.warpPerspective(img_gen1x, mat_T, frame.shape[1::-1])
+        mask_white = img_gen1x_recon[:, :, 3]
+
+        cx = int((left + right) / 2)
+        cy = int((top + bottom) / 2)
+        margin = int(right - left)
+        frame_roi, tblr = crop_img_square(frame, cx, cy, margin)
+        mask_white_roi, _ = crop_img_square(mask_white, cx, cy, margin)
+        img_gen_roi, _ = crop_img_square(img_gen1x_recon[:, :, :3], cx, cy, margin)
+        img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
+        img2 = cv2.bitwise_and(img_gen_roi, img_gen_roi, mask=mask_white_roi)
+
+        A = img1 + img2
+        B = frame_roi
+        M = cv2.cvtColor(mask_white_roi, cv2.COLOR_GRAY2BGR)
+
+        inputs = swapper.make_tensor(A, B, M)
+
+        img_swapped = swapper.swap(inputs)
+        img_swapped_unshrink = cv2.resize(img_swapped, (tblr[3] - tblr[2], tblr[1] - tblr[0]))
+
+        try:
+            frame2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
+        except:
+            print('error', jpg_path.name)
+            continue
 
         print(f + 1, '/', len(jpg_paths), '\t', jpg_path.name)
         # cv2.imshow('frame2', frame2)
-        # cv2.waitKey(1)
+        # cv2.waitKey(0)
         dst_path = os.path.join(pdst, '%s_.jpg' % jpg_path.stem)
         imwrite_uni(dst_path, frame2)
