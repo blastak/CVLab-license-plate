@@ -1,4 +1,3 @@
-import random
 import time
 
 import cv2
@@ -16,7 +15,8 @@ from LP_Recognition.VIN_OCR_ONNX.VinOCR_Onnx import load_model_VinOCR_Onnx
 from LP_Swapping.swap import Swapper
 from LP_Swapping.utils import crop_img_square
 from LP_Tracking.MultiObjectTrackerWithVoting import TrackerWithVoting
-from Utils import trans_eng2kor_v1p3, kor_complete_form, plate_number_tokenizer, iou_4corner
+from Utils import encrypt_number
+from Utils import trans_eng2kor_v1p3, iou_4corner
 from Utils import xywh2xyxy, xyxy2xywh, xywh2cxcywh
 
 
@@ -33,7 +33,8 @@ class Demo_Runner:
         self.tracker = TrackerWithVoting()
         self.gm_generator = Graphical_Model_Generator_KOR()  # 반복문 안에서 객체 생성 시 오버헤드가 발생
 
-        self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
+        # self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try004/ckpt_epoch000200.pth')
+        self.swapper = Swapper('../LP_Swapping/checkpoints/Masked_Pix2pix_CondRealMask_try005_server/ckpt_best_loss_G.pth')
 
         self.using_iwpod = False
         if self.using_iwpod:
@@ -41,43 +42,6 @@ class Demo_Runner:
 
     def setup(self):
         self.tracker.tracks.clear()
-
-    def encrypt_number(self, p_type, p_number, password, reverse=False):
-        if password == '':
-            return p_number
-
-        random.seed(password)
-        while True:
-            adder = random.randint(100, 999999)
-            if adder % 10 != 0:
-                break
-        if reverse:
-            adder = -adder
-
-        tokens = plate_number_tokenizer(p_number)
-        new_tokens = []
-        if p_type in ['P3', 'P4', 'P5']:
-            try:
-                i0 = kor_complete_form[p_type + 'prov'].index(tokens[0])
-                j0 = (i0 + adder) % len(kor_complete_form[p_type + 'prov'])
-            except:
-                j0 = 0
-            new_tokens.append(kor_complete_form[p_type + 'prov'][j0])
-        for ch in ''.join(tokens[1:]):
-            if ch.isdigit():
-                i0 = int(ch)
-                j0 = (i0 + adder) % 10
-                new_tokens.append(str(j0))
-            else:
-                try:
-                    i0 = kor_complete_form[p_type].index(ch)
-                    j0 = (i0 + adder) % len(kor_complete_form[p_type])
-                except:
-                    j0 = 0
-                new_tokens.append(kor_complete_form[p_type][j0])
-
-        new_number = ''.join(new_tokens)
-        return new_number
 
     def loop(self, frame, password1to2, password2to3):
         st0 = time.time()  #######################
@@ -170,7 +134,7 @@ class Demo_Runner:
         types_numbers2 = []
         for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers)):
             st = time.time()  #######################
-            new_number = self.encrypt_number(p_type, p_number, password1to2)
+            new_number = encrypt_number(p_type, p_number, password1to2)
             print('#2 %s: %.1fms' % ('Encrypt LP number', (time.time() - st) * 1000))  #######################
             types_numbers2.append((p_type, new_number))
 
@@ -222,49 +186,49 @@ class Demo_Runner:
             print('#2 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
         img_disp3 = frame.copy()
-        # for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers2)):
-        #     st = time.time()  #######################
-        #     new_number = self.encrypt_number(p_type, p_number, password2to3, reverse=True)
-        #     print(' #3 %s: %.1fms' % ('Decrypt LP number', (time.time() - st) * 1000))  #######################
-        #
-        #     st = time.time()  #######################
-        #     img_gen0 = self.gm_generator.make_LP(new_number, p_type)
-        #     img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
-        #     print(' #3 %s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
-        #
-        #     st = time.time()  #######################
-        #     # graphical model을 전체 이미지 좌표계로 warping
-        #     img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
-        #     # 해당 영역 mask 생성
-        #     mask_white = img_gen_recon[:, :, 3]
-        #     print(' #3 %s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
-        #
-        #     # 정방형 crop
-        #     cx = int(cxcywhs[i][0])
-        #     cy = int(cxcywhs[i][1])
-        #     margin = int(cxcywhs[i][2])
-        #
-        #     # 영상 합성
-        #     st = time.time()  #######################
-        #     frame_roi = frame[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-        #     mask_white_roi = mask_white[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...]
-        #     img_gen_recon_roi = img_gen_recon[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], :3]
-        #     img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
-        #     img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
-        #     print(' #3 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
-        #
-        #     st = time.time()  #######################
-        #     A = img1 + img2
-        #     B = frame_roi
-        #     M = mask_white_roi
-        #     inputs = self.swapper.make_tensor(A, B, M)
-        #     print(' #3 %s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
-        #
-        #     st = time.time()  #######################
-        #     img_swapped = self.swapper.swap(inputs)
-        #     img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
-        #     img_disp3[sq_tb[0]:sq_tb[1], sq_lr[0]:sq_lr[1], ...] = img_swapped_unshrink.copy()
-        #     print(' #3 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
+        for i, (mat_T, (p_type, p_number)) in enumerate(zip(mat_Ts, types_numbers2)):
+            st = time.time()  #######################
+            new_number = encrypt_number(p_type, p_number, password2to3, reverse=True)
+            print(' #3 %s: %.1fms' % ('Decrypt LP number', (time.time() - st) * 1000))  #######################
+
+            st = time.time()  #######################
+            img_gen0 = self.gm_generator.make_LP(new_number, p_type)
+            img_gened = cv2.resize(img_gen0, None, fx=0.5, fy=0.5)
+            print(' #3 %s %s: %.1fms' % ('Make new graphical model', p_type, (time.time() - st) * 1000))  #######################
+
+            st = time.time()  #######################
+            # graphical model을 전체 이미지 좌표계로 warping
+            img_gen_recon = cv2.warpPerspective(img_gened, mat_T, frame.shape[1::-1])
+            # 해당 영역 mask 생성
+            mask_white = img_gen_recon[:, :, 3]
+            print(' #3 %s: %.1fms' % ('superimposing - warpPerspective', (time.time() - st) * 1000))  #######################
+
+            # 정방형 crop
+            cx = int(cxcywhs[i][0])
+            cy = int(cxcywhs[i][1])
+            margin = int(cxcywhs[i][2])
+
+            # 영상 합성
+            st = time.time()  #######################
+            frame_roi, tblr = crop_img_square(frame, cx, cy, margin)
+            mask_white_roi, _ = crop_img_square(mask_white, cx, cy, margin)
+            img_gen_recon_roi, _ = crop_img_square(img_gen_recon[:, :, :3], cx, cy, margin)
+            img1 = cv2.bitwise_and(frame_roi, frame_roi, mask=cv2.bitwise_not(mask_white_roi))
+            img2 = cv2.bitwise_and(img_gen_recon_roi, img_gen_recon_roi, mask=mask_white_roi)
+            print(' #3 %s: %.1fms' % ('superimposing', (time.time() - st) * 1000))  #######################
+
+            st = time.time()  #######################
+            A = img1 + img2
+            B = frame_roi
+            M = mask_white_roi
+            inputs = self.swapper.make_tensor(A, B, M)
+            print(' #3 %s: %.1fms' % ('crop and make tensor ABM', (time.time() - st) * 1000))  #######################
+
+            st = time.time()  #######################
+            img_swapped = self.swapper.swap(inputs)
+            img_swapped_unshrink = cv2.resize(img_swapped, (margin * 2, margin * 2))
+            img_disp3[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
+            print(' #3 %s: %.1fms' % ('swapping', (time.time() - st) * 1000))  #######################
 
         print('%s: %.1fms' % ('--------------total--------------', (time.time() - st0) * 1000))  #######################
 
