@@ -123,6 +123,11 @@ pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/Pu
 pip install pyffx
 ```
 
+### albumentations 설치
+```bash
+pip install albumentations numpy==1.22.0
+```
+
 ---
 ---
 
