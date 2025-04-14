@@ -420,6 +420,7 @@ def encrypt_number(p_type, p_number, password, reverse=False):
         if not reverse:
             idx2 = fpe2.encrypt(idx) % len(regions)  # 리스트 범위 내로 mod
         else:
+            idx2 = idx - len(regions) // 2  # 다른 키로 암호화를 한 걸 복호화 할 경우의 예외처리
             for i in range(len(regions)):
                 if fpe2.encrypt(i) % len(regions) == idx:
                     idx2 = i
@@ -440,6 +441,7 @@ def encrypt_number(p_type, p_number, password, reverse=False):
     if not reverse:
         idx2 = fpe2.encrypt(idx) % len(middle)  # 리스트 범위 내로 mod
     else:
+        idx2 = idx - len(middle) // 2  # 다른 키로 암호화를 한 걸 복호화 할 경우의 예외처리
         for i in range(len(middle)):
             if fpe2.encrypt(i) % len(middle) == idx:
                 idx2 = i

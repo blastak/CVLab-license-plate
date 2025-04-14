@@ -3,16 +3,16 @@ import os
 from pathlib import Path
 
 import cv2
-import numpy as np
 from natsort import natsorted
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_WebCrawl import DatasetLoader_WebCrawl
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
 from Data_Labeling.find_homography_iteratively import find_total_transformation_4points
 from LP_Detection.Bases import Quadrilateral
+from LP_Swapping.swap import Swapper
 from Utils import imread_uni, imwrite_uni, encrypt_number
 from utils import crop_img_square
-from LP_Swapping.swap import Swapper
+
 
 def pixelate_image(img, pixel_size=10):
     # 원본 크기 저장
@@ -22,6 +22,7 @@ def pixelate_image(img, pixel_size=10):
     small = cv2.resize(img, (width // pixel_size, height // pixel_size), interpolation=cv2.INTER_LINEAR)
     pixelated = cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
     return pixelated
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
