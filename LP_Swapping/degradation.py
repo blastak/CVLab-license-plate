@@ -80,11 +80,7 @@ if __name__ == "__main__":
         img_swapped = swapper.swap(inputs)
         img_swapped_unshrink = cv2.resize(img_swapped, (tblr[3] - tblr[2], tblr[1] - tblr[0]))
 
-        try:
-            frame2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
-        except:
-            print('error', jpg_path.name)
-            continue
+        frame2[tblr[0]:tblr[1], tblr[2]:tblr[3], ...] = img_swapped_unshrink.copy()
 
         print(f + 1, '/', len(jpg_paths), '\t', jpg_path.name)
         # cv2.imshow('frame2', frame2)
