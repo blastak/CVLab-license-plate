@@ -1,5 +1,5 @@
+import faulthandler
 import sys
-import time
 
 import cv2
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
@@ -119,6 +119,8 @@ class VideoPlayer(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
+    faulthandler.enable()
+
     app = QtWidgets.QApplication(sys.argv)
     player = VideoPlayer()
     player.show()

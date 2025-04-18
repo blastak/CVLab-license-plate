@@ -113,16 +113,24 @@ def calculate_total_transformation(mat_A, mat_H):
     return mat_T
 
 
-def find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb):
+def find_total_transformation_3points(img_gened, generator, plate_type, img, bb):
     g_h, g_w = img_gened.shape[:2]
     mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
     # cv2.imshow('mask_text_area', mask_text_area)
     # cv2.waitKey()
-    img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
+    img_front, mat_A = frontalization(img, bb, g_w, g_h, mode=3)
     pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
     mat_H = find_homography_with_minimum_error(img_gened, mask_text_area, img_front, pt1, pt2)
     mat_T = calculate_total_transformation(mat_A, mat_H)
     return mat_T
+
+
+def find_total_transformation_4points(img_gened, generator, plate_type, img, qb):
+    g_h, g_w = img_gened.shape[:2]
+    # mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+    img_front, mat_T = frontalization(img, qb, g_w, g_h, mode=4)
+    mat_T_inv = np.linalg.inv(mat_T)
+    return mat_T_inv
 
 
 def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
@@ -189,7 +197,7 @@ if __name__ == '__main__':
         dst_xy_list = []
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
-            mat_T = find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb)
+            mat_T = find_total_transformation_3points(img_gened, generator, plate_type, img, bb_or_qb)
 
             # graphical model을 전체 이미지 좌표계로 warping
             img_gen_recon = cv2.warpPerspective(img_gened, mat_T, (i_w, i_h))

@@ -7,6 +7,7 @@ from xml.etree.ElementTree import Element, SubElement
 
 import cv2
 import numpy as np
+import pyffx
 from PIL import ImageFont, ImageDraw, Image
 from bidict import bidict
 
@@ -37,13 +38,13 @@ kor_complete_form = {
     'P1-2': ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '버', '서', '어', '저', '고', '노', '도', '로', '모', '보',
              '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '하', '허', '호', '육', '해', '공', '국', '합'],
     'P1-3': ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '버', '서', '어', '저', '고', '노', '도', '로', '모', '보',
-             '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '하', '허', '호', '육', '해', '공', '국', '합'],
+             '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '하', '허', '호'],
     'P1-4': ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '버', '서', '어', '저', '고', '노', '도', '로', '모', '보',
-             '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '하', '허', '호', '육', '해', '공', '국', '합'],
+             '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '하', '허', '호'],
     'P2': ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '버', '서', '어', '저', '고', '노', '도', '로', '모', '보',
            '소', '오', '조', '구', '누', '두', '루', '무', '부', '수', '우', '주', '허'],
-    'P3': ['아', '바', '사', '자'],
-    'P3prov': ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'],
+    'P3': ['아', '바', '사', '자'], # 배 언제
+    'P3prov': ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'], # 세종 언제
     'P4': ['아', '바', '사', '자'],
     'P4prov': ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'],
     'P5': ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '버', '서', '어', '저', '고', '노', '도', '로', '모', '보',
@@ -400,6 +401,59 @@ def plate_number_tokenizer(plate_number='서울12가3456'):
     kor_mid = koreans.pop(-1)
     kor_prov = ''.join(koreans)
     return kor_prov, digit_2, kor_mid, digit_4
+
+
+def encrypt_number(p_type, p_number, password, reverse=False):
+    if password == '':
+        return p_number
+
+    key = bytes(password, 'utf-8')
+    fpe2 = pyffx.Integer(key, length=2)
+    fpe3 = pyffx.Integer(key, length=3)
+    fpe4 = pyffx.Integer(key, length=4)
+
+    tokens = plate_number_tokenizer(p_number)  # 번호판 문자 분해
+    new_tokens = []
+    if p_type in ['P3', 'P4', 'P5']:
+        regions = kor_complete_form[p_type + 'prov']
+        idx = regions.index(tokens[0])  # 토큰의 인덱스 찾기
+        if not reverse:
+            idx2 = fpe2.encrypt(idx) % len(regions)  # 리스트 범위 내로 mod
+        else:
+            idx2 = idx - len(regions) // 2  # 다른 키로 암호화를 한 걸 복호화 할 경우의 예외처리
+            for i in range(len(regions)):
+                if fpe2.encrypt(i) % len(regions) == idx:
+                    idx2 = i
+                    break
+        new_tokens.append(regions[idx2])
+
+    ## for 2(or 3)-digit
+    if len(tokens[1]) == 3:
+        val = fpe3.decrypt(int(tokens[1])) if reverse else fpe3.encrypt(int(tokens[1]))
+        new_tokens.append('%03d' % val)
+    else:
+        val = fpe2.decrypt(int(tokens[1])) if reverse else fpe2.encrypt(int(tokens[1]))
+        new_tokens.append('%02d' % val)
+
+    ## for middle korean
+    middle = kor_complete_form[p_type]
+    idx = middle.index(tokens[2])
+    if not reverse:
+        idx2 = fpe2.encrypt(idx) % len(middle)  # 리스트 범위 내로 mod
+    else:
+        idx2 = idx - len(middle) // 2  # 다른 키로 암호화를 한 걸 복호화 할 경우의 예외처리
+        for i in range(len(middle)):
+            if fpe2.encrypt(i) % len(middle) == idx:
+                idx2 = i
+                break
+    new_tokens.append(middle[idx2])
+
+    ## for 4-digit
+    val = fpe4.decrypt(int(tokens[3])) if reverse else fpe4.encrypt(int(tokens[3]))
+    new_tokens.append('%04d' % val)
+
+    new_number = ''.join(new_tokens)
+    return new_number
 
 
 KST = timezone(timedelta(hours=9))
