@@ -29,9 +29,9 @@ if __name__ == '__main__':
             gpu_ids.append(int(n))
 
     ########## torch environment settings
-    manual_seed = 189649830
-    random.seed(manual_seed)
-    torch.manual_seed(manual_seed)
+    # manual_seed = 189649830
+    # random.seed(manual_seed)
+    # torch.manual_seed(manual_seed)
     device = torch.device('cuda:%d' % gpu_ids[0] if (torch.cuda.is_available() and len(gpu_ids) > 0) else 'cpu')
     torch.set_default_device(device)  # working on torch>2.0.0
     if torch.cuda.is_available() and len(gpu_ids) > 1:
