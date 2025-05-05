@@ -188,7 +188,7 @@ if __name__ == '__main__':
             boxes.append(bb_vinlpd)
 
         # iwpod_tf로 검출
-        parallelograms = find_lp_corner(img, iwpod_tf)
+        parallelograms, prob = find_lp_corner(img, iwpod_tf)
         for _, p in enumerate(parallelograms):
             qb_iwpod = Quadrilateral(p[0], p[1], p[2], p[3])  # ex) p[0] : (342.353, 454.223)
             boxes.append(qb_iwpod)

@@ -31,11 +31,13 @@ def find_lp_corner(img_orig, iwpod_net):
                                       lp_output_resolution, lp_threshold)
 
     xys2_list = []
+    prob_list = []
     for j, img in enumerate(LlpImgs):
         pts = Llp[j].pts * iwh
         xys2 = np.transpose(pts)
         xys2_list.append(xys2.tolist())
-    return xys2_list
+        prob_list.append(Llp[j].prob())
+    return xys2_list, prob_list
 
 
 if __name__ == '__main__':
@@ -44,7 +46,7 @@ if __name__ == '__main__':
     # img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
     img_path = "../sample_image/example_aolp_fullimage.jpg"
     img = imread_uni(img_path)
-    x = find_lp_corner(img, mymodel)
+    x, prob = find_lp_corner(img, mymodel)
     y = cal_BB(x)
     print(x)
     print(y)
@@ -59,7 +61,7 @@ if __name__ == '__main__':
 
     # negative test
     neg_img = np.zeros_like(img)
-    x = find_lp_corner(neg_img, mymodel)
+    x, prob = find_lp_corner(neg_img, mymodel)
     y = cal_BB(x)
     print(x)
     print(y)

@@ -27,11 +27,13 @@ def find_lp_corner(img_orig, iwpod_net):
                                       lp_output_resolution, lp_threshold)
 
     xys2_list = []
+    prob_list = []
     for j, img in enumerate(LlpImgs):
         pts = Llp[j].pts * iwh
         xys2 = np.transpose(pts)
         xys2_list.append(xys2.tolist())
-    return xys2_list
+        prob_list.append(Llp[j].prob())
+    return xys2_list, prob_list
 
 
 def cal_BB(pre_cen):
@@ -79,7 +81,7 @@ if __name__ == '__main__':
     # img_path = "../sample_image/14266136_P1-2_01루4576.jpg"
     img_path = "../sample_image/example_aolp_fullimage.jpg"
     img = imread_uni(img_path)
-    x = find_lp_corner(img, iwpod_tf)
+    x, prob = find_lp_corner(img, iwpod_tf)
     y = cal_BB(x)
     print(x)
     print(y)
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     cv2.waitKey()
 
     # negative test
-    x = find_lp_corner(np.zeros_like(img), iwpod_tf)
+    x, prob = find_lp_corner(np.zeros_like(img), iwpod_tf)
     y = cal_BB(x)
     print(x)
     print(y)

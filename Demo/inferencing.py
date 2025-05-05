@@ -54,7 +54,7 @@ class Demo_Runner:
         # 검출2
         if self.using_iwpod:
             st = time.time()  #######################
-            parallelograms = find_lp_corner(frame, self.iwpod_tf)
+            parallelograms, prob = find_lp_corner(frame, self.iwpod_tf)
             print('%s: %.1fms' % ('detection2', (time.time() - st) * 1000))  #######################
 
         # 인식
