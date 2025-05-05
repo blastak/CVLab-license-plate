@@ -1,6 +1,7 @@
 import csv
 import os
 import sys
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -75,6 +76,24 @@ def load_csv(path):
     return coordinates_list, len(coordinates_list)
 
 
+def pred_to_csv(prefix, iwpod_tf):
+    img_paths = [p.resolve() for p in prefix.iterdir() if p.suffix == '.jpg']
+
+    for _, img_path in enumerate(img_paths):
+        img = imread_uni(img_path)
+        x, prob = find_lp_corner(img, iwpod_tf)
+        y = []
+        for i, b in enumerate(x):
+            y.append(['P0', b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], b[3][0], b[3][1], prob[i]])
+
+        base_name = os.path.splitext(img_path)[0]
+        csv_filename = f'{base_name}.csv'
+        with open(csv_filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            for row in y:
+                writer.writerow(row)
+
+
 if __name__ == '__main__':
     iwpod_tf = load_model_tf('./weights/iwpod_net')
 
@@ -99,3 +118,6 @@ if __name__ == '__main__':
     y = cal_BB(x)
     print(x)
     print(y)
+
+    # prefix = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
+    # pred_to_csv(prefix, iwpod_tf)

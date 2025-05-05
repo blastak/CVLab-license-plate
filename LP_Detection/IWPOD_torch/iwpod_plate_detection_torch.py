@@ -1,3 +1,6 @@
+import csv
+from pathlib import Path
+
 import cv2
 import numpy as np
 import torch
@@ -40,6 +43,24 @@ def find_lp_corner(img_orig, iwpod_net):
     return xys2_list, prob_list
 
 
+def IWPODtorch_to_csv(prefix_path, mymodel):
+    img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
+
+    for _, img_path in enumerate(img_paths):
+        img = imread_uni(img_path)
+        x, prob = find_lp_corner(img, mymodel)
+        y = []
+        for i, b in enumerate(x):
+            y.append(['P0', b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], b[3][0], b[3][1], prob[i]])
+
+        base_name = img_path.stem
+        csv_filename = img_path.with_name(f"{base_name}.csv")
+        with open(csv_filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            for row in y:
+                writer.writerow(row)
+
+
 if __name__ == '__main__':
     mymodel = load_model_torch('./src/weights/iwpodnet_retrained_epoch10000.pth')
 
@@ -65,3 +86,6 @@ if __name__ == '__main__':
     y = cal_BB(x)
     print(x)
     print(y)
+
+    # prefix_path = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
+    # IWPODtorch_to_csv(prefix_path, mymodel)

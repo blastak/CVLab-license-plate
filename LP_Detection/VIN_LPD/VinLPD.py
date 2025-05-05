@@ -1,3 +1,6 @@
+import csv
+from pathlib import Path
+
 import cv2
 import numpy as np
 
@@ -17,6 +20,25 @@ def load_model_VinLPD(path_base):
     return d_net
 
 
+def VIN_to_csv(prefix_path):
+    img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
+    d_net = load_model_VinLPD('./weight')
+
+    for _, img_path in enumerate(img_paths):
+        img = imread_uni(img_path)
+        d_out = d_net.forward(img)[0]
+        y = []
+        for i, b in enumerate(d_out):
+            y.append([b.class_str, b.x, b.y, b.x + b.w, b.y, b.x + b.w, b.y + b.h, b.x, b.y + b.h, b.conf])
+
+        base_name = img_path.stem
+        csv_filename = img_path.with_name(f"{base_name}.csv")
+        with open(csv_filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            for row in y:
+                writer.writerow(row)
+
+
 if __name__ == '__main__':
     d_net = load_model_VinLPD('./weight')
     img = imread_uni('../sample_image/seoulmp4_001036359jpg.jpg')
@@ -32,3 +54,6 @@ if __name__ == '__main__':
     cv2.resizeWindow('img_bb', tuple(map(lambda x: int(x * 0.9), (1920, 1080))))
     cv2.imshow('img_bb', img_bb)
     cv2.waitKey()
+
+    # prefix_path = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
+    # VIN_to_csv(prefix_path)
