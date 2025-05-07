@@ -1,7 +1,9 @@
 import argparse
+import json
 import os
 
 import numpy as np
+import pandas as pd
 from shapely.geometry import Polygon
 
 from LP_Detection.Evaluate.csv_loader import DatasetLoader
@@ -32,11 +34,42 @@ def convert_Quad_to_Box(Quad):
     return BBox
 
 
+def save_results_json(metrics_per_class, mAP50, mAP5095, precision, recall, output_path):
+    results = {
+        "overall": {
+            "mAP@0.5": mAP50,
+            "mAP@0.5:0.95": mAP5095,
+            "precision": precision,
+            "recall": recall
+        },
+        "per_class": metrics_per_class
+    }
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=4, ensure_ascii=False)
+
+
+def save_results_excel(metrics_per_class, mAP50, mAP5095, precision, recall, output_path):
+    # per-class metrics
+    df = pd.DataFrame.from_dict(metrics_per_class, orient='index')
+    df.index.name = "Class"
+
+    # add overall as a separate row
+    overall = pd.DataFrame([{
+        "map50": mAP50,
+        "map5095": mAP5095,
+        "precision": precision,
+        "recall": recall
+    }], index=["OVERALL"])
+
+    df_combined = pd.concat([df, overall])
+    df_combined.to_excel(output_path)
+
+
 def calculate_metrics_per_class(results, count_classes, iou_thresholds):
-    # 특정 클래스와 IoU threshold
     metrics_per_class = {}
     total_tp = 0
     total_fp = 0
+    eps = 1e-9
 
     for cls in list(count_classes.keys()):
         gt_count = count_classes[cls]
@@ -45,95 +78,59 @@ def calculate_metrics_per_class(results, count_classes, iou_thresholds):
         recalls_at_50 = None
 
         for target_iou in iou_thresholds:
-            tp = np.array(results[cls]['tp'][target_iou])  # True Positive
-            conf = np.array(results[cls]['conf'][target_iou])  # Confidence scores
+            tp = np.array(results[cls]['tp'][target_iou])
+            conf = np.array(results[cls]['conf'][target_iou])
             if len(tp) == 0:
                 ap_per_iou.append(0)
                 continue
 
-            # Precision, Recall 계산
             sorted_indices = np.argsort(-conf)
             tp_sorted = tp[sorted_indices]
 
             cum_tp = np.cumsum(tp_sorted)
             cum_fp = np.cumsum(~tp_sorted)
 
-            # Precision, Recall 계산
-            precisions = cum_tp / (cum_tp + cum_fp)
-            recalls = cum_tp / gt_count
+            precisions = cum_tp / (cum_tp + cum_fp + 1e-9)
+            recalls = cum_tp / (gt_count + 1e-9)
+
             if target_iou == 0.5:
-                precisions_at_50 = precisions[-1]
+                precisions_at_50 = np.mean(precisions)
                 recalls_at_50 = recalls[-1]
                 total_tp += np.sum(tp_sorted)
                 total_fp += np.sum(~tp_sorted)
 
-            ap = compute_ap(precisions, recalls)
+            # ap1 = np.trapz(precisions, recalls)  # Trapezoidal Rule
+            ap = np.sum((recalls[1:] - recalls[:-1]) * precisions[1:])  # VOC-style
             ap_per_iou.append(ap)
 
         map5095 = np.mean(ap_per_iou)
         metrics_per_class[cls] = {
-            "map50": ap_per_iou[0],  # AP at IoU 0.5
+            "map50": ap_per_iou[0],
             "map5095": map5095,
             "precision": precisions_at_50,
             "recall": recalls_at_50
         }
-    # 전체 Precision과 Recall 계산 (IoU 0.5 기준)
-    overall_precision = total_tp / (total_tp + total_fp)
-    overall_recall = total_tp / sum(count_classes.values())
 
-    return metrics_per_class, overall_precision, overall_recall
+    overall_precision = total_tp / (total_tp + total_fp + eps)
+    overall_recall = total_tp / (sum(count_classes.values()) + eps)
 
+    mAP50 = sum(metrics_per_class[cls]['map50'] for cls in metrics_per_class) / len(metrics_per_class)
+    mAP5095 = sum(metrics_per_class[cls]['map5095'] for cls in metrics_per_class) / len(metrics_per_class)
 
-def compute_ap(precision, recall):
-    """
-    Computes Average Precision (AP) using the Precision-Recall curve.
-
-    Args:
-        precision (list or np.ndarray): Precision values.
-        recall (list or np.ndarray): Recall values.
-
-    Returns:
-        float: Average Precision (AP) value.
-    """
-    # Ensure recall starts with 0 and ends with 1
-    recall = np.concatenate(([0.0], recall, [1.0]))
-    precision = np.concatenate(([0.0], precision, [0.0]))
-
-    # Ensure precision is non-increasing
-    for i in range(len(precision) - 1, 0, -1):
-        precision[i - 1] = max(precision[i - 1], precision[i])
-
-    # Compute the area under the curve using trapezoidal rule
-    ap = np.sum((recall[1:] - recall[:-1]) * precision[1:])
-    return ap
+    return metrics_per_class, mAP50, mAP5095, overall_precision, overall_recall
 
 
-def calculate_metrics(predictions, count_classes, iou_threshold=0.5):
+def tp_fp(predictions, count_classes):
     all_classes = set(count_classes.keys()) | {pred[1] for pred in predictions}
     iou_thresholds = [round(0.5 + 0.05 * i, 2) for i in range(10)]
     results = {cls: {"tp": {iou: [] for iou in iou_thresholds}, "conf": {iou: [] for iou in iou_thresholds}} for cls in all_classes}
 
     for pb, pc, pcf, gb, gc, i in predictions:
         for iou_threshold in iou_thresholds:
-            detected = False
-            if pc == gc:  # Only match boxes of the same class
-                if i >= iou_threshold and not detected:
-                    detected = True
-                    results[gc]["tp"][iou_threshold].append(True)  # True Positive
-                    results[gc]["conf"][iou_threshold].append(pcf)
-                else:
-                    results[gc]["tp"][iou_threshold].append(False)  # False Positive
-                    results[gc]["conf"][iou_threshold].append(pcf)
-            else:
-                results[pc]["tp"][iou_threshold].append(False)  # False Positive
-                results[pc]["conf"][iou_threshold].append(pcf)
-
-    metrics_per_class, precision, recall = calculate_metrics_per_class(results, count_classes, iou_thresholds)
-
-    mAP50 = sum(metrics_per_class[cls]['map50'] for cls in metrics_per_class) / len(metrics_per_class)
-    mAP5095 = sum(metrics_per_class[cls]['map5095'] for cls in metrics_per_class) / len(metrics_per_class)
-
-    return metrics_per_class, mAP50, mAP5095, precision, recall
+            TP = False if gc is None or pc != gc or i < iou_threshold else True
+            results[pc]["tp"][iou_threshold].append(TP)
+            results[pc]["conf"][iou_threshold].append(pcf)
+    return results, iou_thresholds
 
 
 def check_mono_cls(loader):  # P0 있으면 단일 클래스
@@ -149,6 +146,7 @@ def check_mono_cls(loader):  # P0 있으면 단일 클래스
                 mono_cls = True
                 break  # 하나만 확인되면 충분
     return mono_cls
+
 
 def check_P1(loader):
     """예측 결과에 P1이 있으면 GT에서 P1-*을 모두 P1로 병합하도록 판단."""
@@ -166,6 +164,9 @@ def check_P1(loader):
 def eval(prefix, mode='quad'):
     loader = DatasetLoader(base_path=prefix)
     if loader.valid:
+        folder_name = os.path.basename(os.path.normpath(prefix))
+        os.makedirs('./results', exist_ok=True)
+
         predictions = []
         count_classes = {}
         mono_cls = check_mono_cls(loader)
@@ -227,14 +228,30 @@ def eval(prefix, mode='quad'):
             total_gt = sum(count_classes.values())
             count_classes = {'P0': total_gt}
 
-        # 메트릭 계산
-        metrics_per_class, mAP50, mAP5095, precision, recall = calculate_metrics(
-            predictions,
-            count_classes,
-            iou_threshold=0.5
-        )
+        with open(f"./results/predictions_{folder_name}_{mode}.txt", "w") as f:
+            for pred in predictions:
+                line = " ".join(map(str, pred))  # 리스트를 문자열로 변환
+                f.write(line + "\n")
 
-        # 출력
+        results, iou_thresholds = tp_fp(predictions, count_classes)
+        with open(f"./results/tpfp_{folder_name}_{mode}.txt", "w") as f:
+            for r in results:
+                line = " ".join(map(str, r))  # 리스트를 문자열로 변환
+                f.write(line + "\n")
+        with open(f"./results/tpfp_{folder_name}_{mode}.txt", "w") as f:
+            for image_id, data in results.items():
+                f.write(f"Image: {image_id}\n")
+                for iou_thresh, confs in data['conf'].items():
+                    tps = data['tp'][iou_thresh]
+                    for idx, (conf, tp) in enumerate(zip(confs, tps)):
+                        f.write(f"  IoU {iou_thresh}, Instance {idx}, Conf: {conf:.4f}, TP: {tp}\n")
+                f.write("\n")
+
+        metrics_per_class, mAP50, mAP5095, precision, recall = calculate_metrics_per_class(results, count_classes, iou_thresholds)
+
+        save_results_json(metrics_per_class, mAP50, mAP5095, precision, recall, f"./results/eval_result_{folder_name}_{mode}.json")
+        save_results_excel(metrics_per_class, mAP50, mAP5095, precision, recall, f"./results/eval_result_{folder_name}_{mode}.xlsx")
+
         print("\n== Per-Class Metrics ==")
         for cls, metric in metrics_per_class.items():
             print(f"[{cls}] mAP@0.5: {metric['map50']:.4f}, mAP@0.5:0.95: {metric['map5095']:.4f}, "
@@ -248,7 +265,7 @@ def eval(prefix, mode='quad'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default=r'D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default=r'D:\Dataset\LicensePlate\QYOLO\test\YOLOv11OBB', help='Input Image folder')
     opt = parser.parse_args()
     prefix = opt.data
 
