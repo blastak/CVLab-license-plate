@@ -55,5 +55,5 @@ if __name__ == '__main__':
     cv2.imshow('img_bb', img_bb)
     cv2.waitKey()
 
-    # prefix_path = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
+    # prefix_path = Path("../sample_image/testset")
     # VIN_to_csv(prefix_path)

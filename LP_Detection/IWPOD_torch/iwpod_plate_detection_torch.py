@@ -87,5 +87,5 @@ if __name__ == '__main__':
     print(x)
     print(y)
 
-    # prefix_path = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
+    # prefix_path = Path("../sample_image/testset")
     # IWPODtorch_to_csv(prefix_path, mymodel)

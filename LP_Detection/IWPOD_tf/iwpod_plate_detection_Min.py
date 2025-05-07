@@ -76,8 +76,8 @@ def load_csv(path):
     return coordinates_list, len(coordinates_list)
 
 
-def pred_to_csv(prefix, iwpod_tf):
-    img_paths = [p.resolve() for p in prefix.iterdir() if p.suffix == '.jpg']
+def pred_to_csv(prefix_path, iwpod_tf):
+    img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(img_path)
@@ -119,5 +119,5 @@ if __name__ == '__main__':
     print(x)
     print(y)
 
-    # prefix = Path(r"D:\Dataset\LicensePlate\test\test_IWPOD_\GoodMatches_P4")
-    # pred_to_csv(prefix, iwpod_tf)
+    # prefix_path = Path("../sample_image/testset")
+    # pred_to_csv(prefix_path, iwpod_tf)
