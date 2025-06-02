@@ -133,8 +133,9 @@ def tp_fp(predictions, count_classes):
     return results, iou_thresholds
 
 
-def check_mono_cls(loader):  # P0 있으면 단일 클래스
+def check_mono_cls(loader):
     mono_cls = False
+    mc = None  # 기본값 설정
 
     for jpg_file in loader.list_jpg:
         base_name = os.path.splitext(jpg_file)[0]
@@ -142,10 +143,14 @@ def check_mono_cls(loader):  # P0 있으면 단일 클래스
 
         if csv_file in loader.list_csv:
             pred = loader.parse_detect(csv_file)
-            if any(p[0] == 'P0' for p in pred):
-                mono_cls = True
-                break  # 하나만 확인되면 충분
-    return mono_cls
+            for p in pred:
+                if p[0] == 'P0' or p[0] == 'License_Plate':
+                    mono_cls = True
+                    mc = p[0]
+                    break  # 하나만 확인되면 충분
+            if mono_cls:
+                break  # 외부 루프도 종료
+    return mono_cls, mc
 
 
 def check_P1(loader):
@@ -169,7 +174,7 @@ def eval(prefix, mode='quad'):
 
         predictions = []
         count_classes = {}
-        mono_cls = check_mono_cls(loader)
+        mono_cls, mc = check_mono_cls(loader)
         merge_P1 = check_P1(loader)
 
         for jpg_file in loader.list_jpg:
@@ -183,7 +188,7 @@ def eval(prefix, mode='quad'):
 
                 for plate_type_gt, gt_coords in gt:
                     if mono_cls:
-                        gt_class = 'P0'
+                        gt_class = mc
                     elif merge_P1 and plate_type_gt.startswith('P1'):
                         gt_class = 'P1'
                     else:
@@ -203,7 +208,7 @@ def eval(prefix, mode='quad'):
                             continue  # 이미 매칭된 GT는 스킵
 
                         if mono_cls:
-                            effective_gt_type = 'P0'
+                            effective_gt_type = mc
                         elif merge_P1 and plate_type_gt.startswith('P1'):
                             effective_gt_type = 'P1'
                         else:
@@ -226,7 +231,7 @@ def eval(prefix, mode='quad'):
                     predictions.append([pred_coords, plate_type_pred, conf, best_match, best_type, best_iou])
         if mono_cls:
             total_gt = sum(count_classes.values())
-            count_classes = {'P0': total_gt}
+            count_classes = {mc: total_gt}
 
         with open(f"./results/predictions_{folder_name}_{mode}.txt", "w") as f:
             for pred in predictions:
