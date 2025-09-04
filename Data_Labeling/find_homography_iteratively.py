@@ -39,7 +39,7 @@ def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
     return pt1, pt2
 
 
-def calculate_text_area_coordinates(generator, shape, plate_type):
+def calculate_text_area_coordinates(generator, plate_type):
     number_area = generator.get_plate_number_area_only(plate_type)
     if plate_type == 'P1-2':
         margin = [-5, -10, 5, 10]
@@ -51,7 +51,7 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
         margin = [-10, -10, 10, 10]
     min_x, min_y, max_x, max_y = map(int, [a + m for a, m in zip(number_area, margin)])
 
-    mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
+    mask_text_area = np.zeros(generator.plate_wh[plate_type][::-1], dtype=np.uint8)
     mask_text_area[min_y:max_y, min_x:max_x] = 255
     return mask_text_area
 
@@ -113,9 +113,9 @@ def calculate_total_transformation(mat_A, mat_H):
     return mat_T
 
 
-def find_total_transformation_3points(img_gened, generator, plate_type, img, bb):
+def find_total_transformation_3points(img_gened, img, bb, plate_type, generator):
     g_h, g_w = img_gened.shape[:2]
-    mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+    mask_text_area = calculate_text_area_coordinates(generator, plate_type)
     # cv2.imshow('mask_text_area', mask_text_area)
     # cv2.waitKey()
     img_front, mat_A = frontalization(img, bb, g_w, g_h, mode=3)
@@ -125,9 +125,8 @@ def find_total_transformation_3points(img_gened, generator, plate_type, img, bb)
     return mat_T
 
 
-def find_total_transformation_4points(img_gened, generator, plate_type, img, qb):
+def find_total_transformation_4points(img_gened, img, qb):
     g_h, g_w = img_gened.shape[:2]
-    # mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
     img_front, mat_T = frontalization(img, qb, g_w, g_h, mode=4)
     mat_T_inv = np.linalg.inv(mat_T)
     return mat_T_inv
@@ -197,7 +196,7 @@ if __name__ == '__main__':
         dst_xy_list = []
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
-            mat_T = find_total_transformation_3points(img_gened, generator, plate_type, img, bb_or_qb)
+            mat_T = find_total_transformation_3points(img_gened, img, bb_or_qb, plate_type, generator)
 
             # graphical model을 전체 이미지 좌표계로 warping
             img_gen_recon = cv2.warpPerspective(img_gened, mat_T, (i_w, i_h))

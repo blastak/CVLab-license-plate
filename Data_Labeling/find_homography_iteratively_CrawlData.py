@@ -71,7 +71,7 @@ if __name__ == '__main__':
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
             g_h, g_w = img_gened.shape[:2]
-            mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+            mask_text_area = calculate_text_area_coordinates(generator, plate_type)
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
             pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)

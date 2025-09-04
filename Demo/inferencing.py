@@ -120,7 +120,7 @@ class Demo_Runner:
                     pt_dst = np.float32(parallelograms[qb_idx])
                 mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
             else:
-                mat_T = find_total_transformation_3points(img_gened, self.gm_generator, p_type, frame, bb)
+                mat_T = find_total_transformation_3points(img_gened, frame, bb, p_type, self.gm_generator)
             print('%s: %.1fms' % ('Compute Homography', (time.time() - st) * 1000))  #######################
             mat_Ts.append(mat_T)  # 암호화 후 superimposing을 위해 저장
 
