@@ -49,8 +49,7 @@ class DatasetLoader_WebCrawl:
 
 
 if __name__ == '__main__':
-    # prefix = './sample_image_label/PM'
-    prefix = r"E:\Dataset\01_LicensePlate\55_WebPlatemania_1944_完\55_WebPlatemania_jpg_json\GoodMatches_P1-1"
+    prefix = './sample_image_label/PM'
 
     loader = DatasetLoader_WebCrawl(prefix)
 
@@ -58,8 +57,6 @@ if __name__ == '__main__':
 
     jpg_paths = [a for a in os.listdir(prefix) if a.endswith('.jpg')]
     for jpg_path in jpg_paths:
-        if jpg_path != '20250407_162944_253.jpg':
-            continue
         img = imread_uni(os.path.join(prefix, jpg_path))
         plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(jpg_path[:-4] + '.json')
 
@@ -71,4 +68,4 @@ if __name__ == '__main__':
 
         cv2.resizeWindow('img_with_label', list(map(lambda x: x // 2, img_with_label.shape[1::-1])))
         cv2.imshow('img_with_label', img_with_label)
-        cv2.waitKey(1)
+        cv2.waitKey()
