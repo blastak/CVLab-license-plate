@@ -270,9 +270,10 @@ def eval(prefix, mode='quad'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default=r'D:\Dataset\LicensePlate\QYOLO\test\YOLOv11OBB', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default=r'../sample_image/testset', help='Input Image folder')
     opt = parser.parse_args()
     prefix = opt.data
 
     eval(prefix)
+    eval(prefix) # 실행 전 detector 에서 VIN_to_csv() 먼저 실행. -> csv 파일 생성
     eval(prefix, 'BBox')
