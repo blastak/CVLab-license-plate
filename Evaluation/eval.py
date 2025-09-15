@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import Polygon
 
-from LP_Detection.Evaluate.csv_loader import DatasetLoader
+from Evaluation.csv_loader import DatasetLoader
 
 
 def QQ_iou(poly1, poly2, mode=0):
@@ -270,7 +270,7 @@ def eval(prefix, mode='quad'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default=r'../sample_image/testset', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default=r'testset/', help='Input Image folder')
     opt = parser.parse_args()
     prefix = opt.data
 
