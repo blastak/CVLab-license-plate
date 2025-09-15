@@ -78,32 +78,47 @@ def calculate_metrics_per_class(results, count_classes, iou_thresholds):
         recalls_at_50 = None
 
         for target_iou in iou_thresholds:
-            tp = np.array(results[cls]['tp'][target_iou])
+            tp = np.array(results[cls]['tp'][target_iou]).astype(int)
             conf = np.array(results[cls]['conf'][target_iou])
+
             if len(tp) == 0:
                 ap_per_iou.append(0)
                 continue
 
+            # confidence 내림차순 정렬
             sorted_indices = np.argsort(-conf)
             tp_sorted = tp[sorted_indices]
+            fp_sorted = 1 - tp_sorted  # FP 보정
 
             cum_tp = np.cumsum(tp_sorted)
-            cum_fp = np.cumsum(~tp_sorted)
+            cum_fp = np.cumsum(fp_sorted)
 
-            precisions = cum_tp / (cum_tp + cum_fp + 1e-9)
-            recalls = cum_tp / (gt_count + 1e-9)
+            recalls = cum_tp / (gt_count + eps)
+            precisions = cum_tp / (cum_tp + cum_fp + eps)
+
+            # precision 보간 (단조 감소)
+            precisions = np.maximum.accumulate(precisions[::-1])[::-1]
+
+            # (0,0) 시작점 추가
+            recalls = np.concatenate(([0.0], recalls))
+            precisions = np.concatenate(([1.0], precisions))
+
+            # ap 계산 (COCO-style 101-point interpolation)
+            recall_levels = np.linspace(0, 1, 101)
+            precisions_interp = []
+            for t in recall_levels:
+                precisions_interp.append(np.max(precisions[recalls >= t]) if np.any(recalls >= t) else 0)
+            ap = np.mean(precisions_interp)
+
+            ap_per_iou.append(ap)
 
             if target_iou == 0.5:
                 precisions_at_50 = np.mean(precisions)
                 recalls_at_50 = recalls[-1]
                 total_tp += np.sum(tp_sorted)
-                total_fp += np.sum(~tp_sorted)
+                total_fp += np.sum(fp_sorted)
 
-            # ap1 = np.trapz(precisions, recalls)  # Trapezoidal Rule
-            ap = np.sum((recalls[1:] - recalls[:-1]) * precisions[1:])  # VOC-style
-            ap_per_iou.append(ap)
-
-        map5095 = np.mean(ap_per_iou)
+        map5095 = np.mean(ap_per_iou)  # mAP50-95 계산
         metrics_per_class[cls] = {
             "map50": ap_per_iou[0],
             "map5095": map5095,
@@ -111,6 +126,7 @@ def calculate_metrics_per_class(results, count_classes, iou_thresholds):
             "recall": recalls_at_50
         }
 
+    # 종합 precision, recall, mAP 계산
     overall_precision = total_tp / (total_tp + total_fp + eps)
     overall_recall = total_tp / (sum(count_classes.values()) + eps)
 
