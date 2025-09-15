@@ -9,15 +9,23 @@ from natsort import natsorted
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_WebCrawl import DatasetLoader_WebCrawl
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from Data_Labeling.find_homography_iteratively import find_total_transformation_4points
+from Data_Labeling.find_homography_iteratively import find_total_transformation_4points, calculate_text_area_coordinates
 from LP_Detection.Bases import Quadrilateral
-from Utils import imread_uni, imwrite_uni
+from Utils import imread_uni, imwrite_uni, encrypt_number
 from utils import crop_img_square
+
+# pw = '8470'
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\04_Chungnam_192_完\good_all", help='source folder')
-    ap.add_argument('--dst_dir', type=str, default=r"./pair_data/02_fix_margin_240", help='destination folder')
+    # ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\55_WebPlatemania_1944_完\55_WebPlatemania_jpg_json\good_all", help='source folder')
+    ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\05_Masan_1056_完\good_all", help='source folder')
+    # ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\56_WebEV_\56_WebEV_jpg_json\GoodMatches_P1-2", help='source folder')
+    # ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\99_Techwin_1F_241\99_Techwin_1F_jpg_json\good_all", help='source folder')
+    # ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\99_Techwin_B1_in_\99_Techwin_B1_in_jpg_json\good_all", help='source folder')
+    # ap.add_argument('--src_dir', type=str, default=r"E:\Dataset\01_LicensePlate\99_Techwin_B1_out_\99_Techwin_B1_out_jpg_json\good_all", help='source folder')
+    ap.add_argument('--dst_dir', type=str, default=r"./pair_data/03color_same-id_P4", help='destination folder')
+    # ap.add_argument('--dst_dir', type=str, default=r"./pair_data/03color_de-id_pw;"+pw, help='destination folder')
     opt = ap.parse_args()
 
     SRC_DIR = opt.src_dir
@@ -41,17 +49,26 @@ if __name__ == "__main__":
 
     generator = Graphical_Model_Generator_KOR()
     loader = DatasetLoader_WebCrawl(SRC_DIR)
-    for f, (jpg_path, json_path) in enumerate(zip(jpg_paths, json_paths)):
-        frame = imread_uni(jpg_path)
+    # for f, (jpg_path, json_path) in enumerate(zip(jpg_paths, json_paths)):
+    f = 0
+    for jpg_path, json_path in zip(jpg_paths, json_paths):
         plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(json_path)
+        if plate_type != 'P4':
+            continue
+        frame = imread_uni(jpg_path)
+
+        # # non encryption
         img_gen2x = generator.make_LP(plate_number, plate_type)
+        # encryption
+        # enc_number = encrypt_number(plate_type, plate_number, pw)#, MODE == 'decrypted')
+        # img_gen2x = generator.make_LP(enc_number, plate_type)
+
         img_gen1x = cv2.resize(img_gen2x, None, fx=0.5, fy=0.5)
 
         # superimposing
         qb = Quadrilateral(xy1, xy2, xy3, xy4)
-        mat_T = find_total_transformation_4points(img_gen1x, generator, plate_type, frame, qb)
+        mat_T = find_total_transformation_4points(img_gen1x, frame, qb)
         img_gen1x_recon = cv2.warpPerspective(img_gen1x, mat_T, frame.shape[1::-1])
-        mask_white = img_gen1x_recon[:, :, 3]
 
         cx = int((left + right) / 2)
         cy = int((top + bottom) / 2)
@@ -60,7 +77,13 @@ if __name__ == "__main__":
         # margin = int(right - left)
 
         ###### 02_fix_margin_240 (즉, 정방형 크기는 480)
+        # margin = 240
+        # mask_white = img_gen1x_recon[:, :, 3]
+
+        ###### 03_fix_margin_240_txtarea
         margin = 240
+        mask_text_area = calculate_text_area_coordinates(generator, plate_type)
+        mask_white = cv2.warpPerspective(mask_text_area, mat_T, frame.shape[1::-1])
 
         frame_roi, _ = crop_img_square(frame, cx, cy, margin)
         mask_white_roi, _ = crop_img_square(mask_white, cx, cy, margin)
@@ -73,11 +96,12 @@ if __name__ == "__main__":
 
         ABM = np.hstack((A, B, M))
 
-        print(f + 1, '/', len(jpg_paths), '\t', jpg_path.name)
         if (f + 1) % 10 == 0:
-            dst_path = os.path.join(pdst['test'], '%s_.jpg' % jpg_path.stem)
+            dst_path = os.path.join(pdst['test'], '%s_.png' % jpg_path.stem)
         else:
-            dst_path = os.path.join(pdst['train'], '%s_.jpg' % jpg_path.stem)
+            dst_path = os.path.join(pdst['train'], '%s_.png' % jpg_path.stem)
+        print(f + 1, '/', len(jpg_paths), '\t', dst_path)
         # cv2.imshow("ABM", ABM)
         # cv2.waitKey(0)
+        f+=1
         imwrite_uni(dst_path, ABM)

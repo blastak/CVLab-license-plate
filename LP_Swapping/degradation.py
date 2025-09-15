@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
             # superimposing
             qb = Quadrilateral(xy1, xy2, xy3, xy4)
-            mat_T = find_total_transformation_4points(img_gen1x, generator, plate_type, frame, qb)
+            mat_T = find_total_transformation_4points(img_gen1x, frame, qb)
             img_gen1x_recon = cv2.warpPerspective(img_gen1x, mat_T, frame.shape[1::-1])
             mask_white = img_gen1x_recon[:, :, 3]
 
