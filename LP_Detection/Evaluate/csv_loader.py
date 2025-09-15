@@ -15,6 +15,23 @@ class DatasetLoader:
     def valid(self):
         return self.__valid
 
+    def __len__(self):
+        """데이터셋 크기 - CSV 기준"""
+        return len(self.list_csv)
+
+    def __getitem__(self, idx):
+        """
+        인덱스로 접근하여 (base_name, predictions, ground_truth) 반환
+        """
+        csv_file = self.list_csv[idx]
+        json_file = self.list_json[idx]
+        base_name = os.path.splitext(csv_file)[0]
+
+        pred = self.parse_detect(csv_file)
+        gt = self.parse_label(json_file)
+
+        return base_name, pred, gt
+
     def parse_detect(self, csv_path):
         """CSV 파일을 파싱하여 모든 예측 번호판 정보 리스트로 반환"""
         filename = os.path.join(self.base_path, csv_path)
@@ -61,15 +78,19 @@ if __name__ == '__main__':
     loader = DatasetLoader(base_path=prefix_path)
 
     if loader.valid:
-        for jpg_file in loader.list_jpg:  # jpg 파일 목록 가져와서 csv, json 접근하기
-            base_name = os.path.splitext(jpg_file)[0]
-            csv_file = f"{base_name}.csv"
-            json_file = f"{base_name}.json"
+        # 기존 방식 (변경 전)
+        # for jpg_file in loader.list_jpg:
+        #     base_name = os.path.splitext(jpg_file)[0]
+        #     csv_file = f"{base_name}.csv"
+        #     json_file = f"{base_name}.json"
+        #
+        #     if csv_file in loader.list_csv and json_file in loader.list_json:
+        #         pred = loader.parse_detect(csv_file)
+        #         gt = loader.parse_label(json_file)
 
-            if csv_file in loader.list_csv and json_file in loader.list_json:
-                pred = loader.parse_detect(csv_file)
-                gt = loader.parse_label(json_file)
-
+        # 새로운 방식 (변경 후)
+        for base_name, pred, gt in loader:  # 간단한 iteration
+            if pred and gt:  # 둘 다 있는 경우만 처리
                 for plate_type_pred, pred_coords, conf in pred:
                     for plate_type_gt, gt_coords in gt:
                         print(f"[{base_name}] 예측: {plate_type_pred} {pred_coords} conf={conf}")

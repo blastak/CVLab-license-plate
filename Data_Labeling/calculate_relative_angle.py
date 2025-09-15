@@ -75,24 +75,60 @@ def calc_relative_angle(xy1, xy2, xy3, xy4, plate_type, image_width, image_heigh
 
 
 if __name__ == '__main__':
-    prefix = './Dataset_Loader/sample_image_label/PM'
-    loader = DatasetLoader_WebCrawl(prefix)
+    # prefix = './Dataset_Loader/sample_image_label/PM'
+    # loader = DatasetLoader_WebCrawl(prefix)
+    #
+    # cv2.namedWindow('img_disp', cv2.WINDOW_NORMAL)
+    # for l, jpg_path in enumerate(loader.list_jpg):
+    #     img_orig = imread_uni(os.path.join(prefix, jpg_path))
+    #     plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(loader.list_json[l])
+    #
+    #     iw, ih = img_orig.shape[1::-1]
+    #     angle_xyz = calc_relative_angle(xy1, xy2, xy3, xy4, plate_type, iw, ih)
+    #     print('x:%-10.2f y:%-10.2f z:%-10.2f' % tuple(angle_xyz))
+    #
+    #     img_disp = img_orig.copy()
+    #     cv2.rectangle(img_disp, (int(left), int(top)), (int(right), int(bottom)), (255, 255, 0), 3)  # bounding box
+    #     cv2.polylines(img_disp, [np.int32([xy1, xy2, xy3, xy4])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
+    #     font_size = (right - left) // 5  # magic number
+    #     img_disp = add_text_with_background(img_disp, plate_number, position=(left, top - font_size), font_size=font_size, padding=0)
+    #
+    #     cv2.resizeWindow('img_disp', list(map(lambda x: x // 2, img_disp.shape[1::-1])))
+    #     cv2.imshow('img_disp', img_disp)
+    #     cv2.waitKey(0)
 
-    cv2.namedWindow('img_disp', cv2.WINDOW_NORMAL)
-    for l, jpg_path in enumerate(loader.list_jpg):
-        img_orig = imread_uni(os.path.join(prefix, jpg_path))
-        plate_type, plate_number, xy1, xy2, xy3, xy4, left, top, right, bottom = loader.parse_json(loader.list_json[l])
+    from pathlib import Path
+    import json
+    base_dir = '/workspace/DB/01_LicensePlate/55_WebPlatemania_jpg_json_20250407'
+    for folder in Path(base_dir).glob('GoodMatches_*'):
+        print(f"\n처리 중: {folder.name}")
+        loader = DatasetLoader_WebCrawl(str(folder))
 
-        iw, ih = img_orig.shape[1::-1]
-        angle_xyz = calc_relative_angle(xy1, xy2, xy3, xy4, plate_type, iw, ih)
-        print('x:%-10.2f y:%-10.2f z:%-10.2f' % tuple(angle_xyz))
+        for i, json_file in enumerate(loader.list_json):
+            json_path = folder / json_file
+            jpg_path = folder / loader.list_jpg[i]
 
-        img_disp = img_orig.copy()
-        cv2.rectangle(img_disp, (int(left), int(top)), (int(right), int(bottom)), (255, 255, 0), 3)  # bounding box
-        cv2.polylines(img_disp, [np.int32([xy1, xy2, xy3, xy4])], True, color=(255, 0, 255), thickness=2, lineType=cv2.LINE_AA)  # quadrilateral box
-        font_size = (right - left) // 5  # magic number
-        img_disp = add_text_with_background(img_disp, plate_number, position=(left, top - font_size), font_size=font_size, padding=0)
+            # 기존 파싱 로직
+            img = imread_uni(str(jpg_path))
+            plate_type, plate_number, xy1, xy2, xy3, xy4, _, _, _, _ = \
+                loader.parse_json(json_file)
 
-        cv2.resizeWindow('img_disp', list(map(lambda x: x // 2, img_disp.shape[1::-1])))
-        cv2.imshow('img_disp', img_disp)
-        cv2.waitKey(0)
+            # 각도 계산
+            ih, iw = img.shape[:2]
+            angle_xyz = calc_relative_angle(xy1, xy2, xy3, xy4, plate_type, iw, ih)
+
+            # JSON 업데이트
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            data['flags']['angle'] = {
+                'x': round(angle_xyz[0], 2),
+                'y': round(angle_xyz[1], 2),
+                'z': round(angle_xyz[2], 2)
+            }
+
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            if (i + 1) % 100 == 0:
+                print(f"  - {i + 1}개 처리 완료")

@@ -9,15 +9,11 @@ from shapely.geometry import Polygon
 from LP_Detection.Evaluate.csv_loader import DatasetLoader
 
 
-def QQ_iou(poly1, poly2, mode=0):
+def QQ_iou(poly1, poly2, force_quad2bbox=False):
     if not poly1 or not poly2:
         return 0.0
-    if mode == 1:  # BBox로 변환
-        poly1 = Polygon(convert_Quad_to_Box(poly1))
-        poly2 = Polygon(convert_Quad_to_Box(poly2))
-    else:
-        poly1 = Polygon(poly1)
-        poly2 = Polygon(poly2)
+    poly1 = Polygon(poly1 if force_quad2bbox else convert_Quad_to_Box(poly1))
+    poly2 = Polygon(poly2 if force_quad2bbox else convert_Quad_to_Box(poly2))
     inter = poly1.intersection(poly2).area
     union = poly1.union(poly2).area
     if union == 0:
@@ -217,7 +213,7 @@ def eval(prefix, mode='quad'):
                         if mode == 'quad':
                             iou_QQ = QQ_iou(pred_coords, gt_coords)  # quad
                         else:
-                            iou_QQ = QQ_iou(pred_coords, gt_coords, 1)  # Box
+                            iou_QQ = QQ_iou(pred_coords, gt_coords, force_quad2bbox=True)  # Box
 
                         if iou_QQ > best_iou:
                             best_iou = iou_QQ
