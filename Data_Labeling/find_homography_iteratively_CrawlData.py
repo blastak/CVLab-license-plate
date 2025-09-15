@@ -1,24 +1,8 @@
 import argparse
 
-from Utils import imwrite_uni, iou_4corner
+from Utils import imwrite_uni, iou_4corner, save_quad
 from find_homography_iteratively import *
 
-
-def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
-    shapes = []
-    quad_xy = dst_xy.tolist()
-    shape = dict(
-        label=plate_type + '_' + plate_number,
-        points=quad_xy[0],
-        group_id=None,
-        description='',
-        shape_type='polygon',
-        flags={},
-        mask=None
-    )
-    shapes.append(shape)
-
-    save_json(path, shapes, imagePath, imageHeight, imageWidth)
 
 
 if __name__ == '__main__':

@@ -9,7 +9,8 @@ from natsort import natsorted
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_WebCrawl import DatasetLoader_WebCrawl
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
-from Data_Labeling.find_homography_iteratively import find_total_transformation_4points, calculate_text_area_coordinates
+from Data_Labeling.find_homography_iteratively import find_total_transformation_4points
+from Data_Labeling.labeling_utils import calculate_text_area_coordinates
 from LP_Detection.Bases import Quadrilateral
 from Utils import imread_uni, imwrite_uni, encrypt_number
 from utils import crop_img_square
