@@ -357,6 +357,23 @@ def save_xml(xml_path, xyxys, labels):
         # f.write(ElementTree.tostring(root,encoding='utf-8').decode())
 
 
+def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
+    shapes = []
+    quad_xy = dst_xy.tolist()
+    shape = dict(
+        label=plate_type + '_' + plate_number,
+        points=quad_xy[0],
+        group_id=None,
+        description='',
+        shape_type='polygon',
+        flags={},
+        mask=None
+    )
+    shapes.append(shape)
+
+    save_json(path, shapes, imagePath, imageHeight, imageWidth)
+
+
 def iou(bb1, bb2):
     """
     intersection over union 계산

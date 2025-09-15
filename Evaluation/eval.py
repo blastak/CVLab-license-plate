@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import Polygon
 
-from LP_Detection.Evaluate.csv_loader import DatasetLoader
+from Evaluation.csv_loader import DatasetLoader
 
 
 def QQ_iou(poly1, poly2, force_quad2bbox=False):
@@ -266,9 +266,10 @@ def eval(prefix, mode='quad'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default=r'D:\Dataset\LicensePlate\QYOLO\test\YOLOv11OBB', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default=r'testset/', help='Input Image folder')
     opt = parser.parse_args()
     prefix = opt.data
 
     eval(prefix)
+    eval(prefix) # 실행 전 detector 에서 VIN_to_csv() 먼저 실행. -> csv 파일 생성
     eval(prefix, 'BBox')
