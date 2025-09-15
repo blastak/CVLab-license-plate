@@ -128,6 +128,11 @@ pip install pyffx
 pip install albumentations numpy==1.22.0
 ```
 
+### shapely, openpyxl 설치
+```bash
+pip install shapely openpyxl numpy==1.22.0
+```
+
 ---
 ---
 
@@ -140,7 +145,7 @@ pip install albumentations numpy==1.22.0
 
 * ~~pip install --upgrade pip~~
 
-* ~~pip install "tensorflow<2.11" numpy==1.22 opencv-python==4.10.0.84 selenium webdriver_manager pyautogui pyperclip pytubefix bidict matplotlib scipy natsort pyqt5 pyqt5-tools tqdm gradio pyffx~~
+* ~~pip install "tensorflow<2.11" numpy==1.22 opencv-python==4.10.0.84 selenium webdriver_manager pyautogui pyperclip pytubefix bidict matplotlib scipy natsort pyqt5 pyqt5-tools tqdm gradio pyffx shapely openpyxl~~
 
 * ~~pip install numpy==1.22 torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118~~
 
