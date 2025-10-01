@@ -7,7 +7,6 @@ from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR impo
 from Data_Labeling.labeling_utils import generate_license_plate, find_total_transformation, front_image, compare_ocrbb, detect_all
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
-from LP_Detection.ultralytics import YOLO
 from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
 from Utils import imread_uni, save_quad
 
@@ -17,7 +16,7 @@ from pathlib import Path
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, default=r'D:\Dataset\LicensePlate\test\test_make_label', help='Input Image folder')
+    parser.add_argument('-d', '--data', type=str, default=r'Dataset_Loader/sample_image_label/test_image', help='Input Image folder')
     opt = parser.parse_args()
 
     prefix_path = Path(opt.data)
@@ -26,7 +25,6 @@ if __name__ == '__main__':
     d_net = load_model_VinLPD('../LP_Detection/VIN_LPD/weight')  # VIN_LPD 사용 준비
     r_net = load_model_VinOCR('../LP_Recognition/VIN_OCR/weight')
     iwpod_tf = load_model_tf('../LP_Detection/IWPOD_tf/weights/iwpod_net')  # iwpod_tf 사용 준비
-    yolo = YOLO(f"../../LP_Detection/ultralytics/pt/min_ALL_11l.pt")
     generator = Graphical_Model_Generator_KOR()
 
     for _, img_path in enumerate(img_paths):
@@ -45,7 +43,7 @@ if __name__ == '__main__':
 
             mat_T = find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb)
 
-            for T in mat_T:
+            for T in mat_T:  # 모든 T에 대해 좌표 계산
                 # graphical model을 전체 이미지 좌표계로 warping
                 img_gen_recon = cv2.warpPerspective(img_gened, T, (i_w, i_h))
 
@@ -64,7 +62,7 @@ if __name__ == '__main__':
 
         min_offset = 30
         best_result = None
-        for i, dst_xy in enumerate(dst_xy_list):
+        for i, dst_xy in enumerate(dst_xy_list):  # ocrBB 최소값 결과만 저장
             img_front = front_image(dst_xy, img, plate_type, img_path, prefix_path, generator, i, save=False)
             offset = compare_ocrbb(img_front, generator, plate_type, r_net)
             print(offset)
