@@ -79,6 +79,9 @@ def load_csv(path):
 def pred_to_csv(prefix_path, iwpod_tf):
     img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
 
+    save_dir = prefix_path.parent / "IWPODtf_csv"
+    save_dir.mkdir(parents=True, exist_ok=True)
+
     for _, img_path in enumerate(img_paths):
         img = imread_uni(img_path)
         x, prob = find_lp_corner(img, iwpod_tf)
@@ -86,8 +89,8 @@ def pred_to_csv(prefix_path, iwpod_tf):
         for i, b in enumerate(x):
             y.append(['P0', b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], b[3][0], b[3][1], prob[i]])
 
-        base_name = os.path.splitext(img_path)[0]
-        csv_filename = f'{base_name}.csv'
+        base_name = img_path.stem
+        csv_filename = save_dir / f"{base_name}.csv"
         with open(csv_filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             for row in y:

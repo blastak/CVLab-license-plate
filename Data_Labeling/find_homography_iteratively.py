@@ -5,76 +5,15 @@ import numpy as np
 
 from Data_Labeling.Dataset_Loader.DatasetLoader_ParkingView import DatasetLoader_ParkingView
 from Data_Labeling.Graphical_Model_Generation.Graphical_Model_Generator_KOR import Graphical_Model_Generator_KOR
+from Data_Labeling.labeling_utils import generate_license_plate, extract_N_track_features, calculate_text_area_coordinates, frontalization, calculate_total_transformation, save
 from LP_Detection.Bases import BBox, Quadrilateral
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
-from Utils import imread_uni, save_json
+from Utils import imread_uni
 
 extensions = ['.jpg', '.png', '.xml', '.json']
-
-
-def generate_license_plate(generator, plate_type, plate_number):
-    img_gen = generator.make_LP(plate_number, plate_type)
-    img_gen = cv2.erode(img_gen, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))
-    img_gen = cv2.resize(img_gen, None, fx=0.5, fy=0.5)
-    return img_gen
-
-
-def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
-    img_gen_gray = cv2.cvtColor(img_gened, cv2.COLOR_BGR2GRAY)
-    if plate_type == 'P5' or plate_type == 'P6':
-        img_gen_gray = 255 - img_gen_gray
-    pt_gen = cv2.goodFeaturesToTrack(img_gen_gray, 500, 0.01, 5, mask=mask_text_area)  # feature extraction
-
-    img_front_gray = cv2.cvtColor(img_front, cv2.COLOR_BGR2GRAY)
-    if plate_type == 'P5' or plate_type == 'P6':
-        img_front_gray = 255 - img_front_gray
-    img_front_gray_histeq = cv2.equalizeHist(img_front_gray)  # histogram equalization
-    pt_tracked, status, err = cv2.calcOpticalFlowPyrLK(img_gen_gray, img_front_gray_histeq, pt_gen, None)  # feature tracking
-
-    pt1 = pt_gen[status == 1].astype(np.int32)
-    pt2 = pt_tracked[status == 1].astype(np.int32)
-    return pt1, pt2
-
-
-def calculate_text_area_coordinates(generator, plate_type):
-    number_area = generator.get_plate_number_area_only(plate_type)
-    if plate_type == 'P1-2':
-        margin = [-5, -10, 5, 10]
-    elif plate_type == 'P3':
-        margin = [-10, -8, 10, 10]
-    elif plate_type in ['P5', 'P6']:
-        margin = [0, 0, 0, 0]
-    else:
-        margin = [-10, -10, 10, 10]
-    min_x, min_y, max_x, max_y = map(int, [a + m for a, m in zip(number_area, margin)])
-
-    mask_text_area = np.zeros(generator.plate_wh[plate_type][::-1], dtype=np.uint8)
-    mask_text_area[min_y:max_y, min_x:max_x] = 255
-    return mask_text_area
-
-
-def frontalization(img_big, bb_or_qb, gen_w, gen_h, mode=3):
-    if mode == 3:
-        if 'Quad' in str(bb_or_qb.__class__):
-            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3])
-        else:
-            b = bb_or_qb
-            pt_src = np.float32([(b.x, b.y), (b.x + b.w, b.y), (b.x + b.w, b.y + b.h)])
-        pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h]])
-        mat_T = cv2.getAffineTransform(pt_src, pt_dst)
-        img_front = cv2.warpAffine(img_big, mat_T, [gen_w, gen_h])  # 입력 이미지(img_big)를 gen과 같은 크기로 warping
-    else:
-        if 'Quad' in str(bb_or_qb.__class__):
-            pt_src = np.float32([bb_or_qb.xy1, bb_or_qb.xy2, bb_or_qb.xy3, bb_or_qb.xy4])
-            pt_dst = np.float32([[0, 0], [gen_w, 0], [gen_w, gen_h], [0, gen_h]])
-            mat_T = cv2.getPerspectiveTransform(pt_src, pt_dst)
-            img_front = cv2.warpPerspective(img_big, mat_T, [gen_w, gen_h])
-        else:
-            raise NotImplementedError
-    return img_front, mat_T
 
 
 def find_homography_with_minimum_error(img_gen, mask_text_area, img_front, pt1, pt2):
@@ -105,14 +44,6 @@ def find_homography_with_minimum_error(img_gen, mask_text_area, img_front, pt1, 
     return mat_H
 
 
-def calculate_total_transformation(mat_A, mat_H):
-    # Transform Matrix 역변환
-    mat_A_homo = np.vstack((mat_A, [0, 0, 1]))
-    mat_A_inv = np.linalg.inv(mat_A_homo)
-    mat_T = mat_A_inv @ mat_H
-    return mat_T
-
-
 def find_total_transformation_3points(img_gened, img, bb, plate_type, generator):
     g_h, g_w = img_gened.shape[:2]
     mask_text_area = calculate_text_area_coordinates(generator, plate_type)
@@ -130,34 +61,6 @@ def find_total_transformation_4points(img_gened, img, qb):
     img_front, mat_T = frontalization(img, qb, g_w, g_h, mode=4)
     mat_T_inv = np.linalg.inv(mat_T)
     return mat_T_inv
-
-
-def save(dst_xy_list, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
-    shapes = []
-    print("1 or 2 or 3")
-    key_in = cv2.waitKey()
-    if key_in == ord('1'):
-        print(1)
-        quad_xy = dst_xy_list[0]
-    elif key_in == ord('2'):
-        print(2)
-        quad_xy = dst_xy_list[1]
-    elif key_in == ord('3'):
-        print(3)
-        quad_xy = dst_xy_list[2]
-    quad_xy = quad_xy[0].tolist()
-    shapes = [
-        dict(
-            label=plate_type + '_' + plate_number,
-            points=quad_xy,
-            group_id=None,
-            description='',
-            shape_type='polygon',
-            flags={},
-            mask=None
-        )
-    ]
-    save_json(path, shapes, imagePath, imageHeight, imageWidth)
 
 
 if __name__ == '__main__':

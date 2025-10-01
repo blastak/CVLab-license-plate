@@ -6,10 +6,10 @@ import numpy as np
 import torch
 
 from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import cal_BB
+from LP_Detection.IWPOD_torch.src.detect import detect_lp_width
+from LP_Detection.IWPOD_torch.src.src.model import IWPODNet
+from LP_Detection.IWPOD_torch.src.src.utils import im2single
 from Utils import imread_uni
-from src.detect import detect_lp_width
-from src.src.model import IWPODNet
-from src.src.utils import im2single
 
 
 def load_model_torch(path):
@@ -45,7 +45,8 @@ def find_lp_corner(img_orig, iwpod_net):
 
 def IWPODtorch_to_csv(prefix_path, mymodel):
     img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
-
+    save_dir = prefix_path.parent / "IWPODtorch_csv"
+    save_dir.mkdir(parents=True, exist_ok=True)
     for _, img_path in enumerate(img_paths):
         img = imread_uni(img_path)
         x, prob = find_lp_corner(img, mymodel)
@@ -54,7 +55,7 @@ def IWPODtorch_to_csv(prefix_path, mymodel):
             y.append(['P0', b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], b[3][0], b[3][1], prob[i]])
 
         base_name = img_path.stem
-        csv_filename = img_path.with_name(f"{base_name}.csv")
+        csv_filename = save_dir / f"{base_name}.csv"
         with open(csv_filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             for row in y:

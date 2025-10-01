@@ -11,8 +11,8 @@ from LP_Detection.IWPOD_tf.iwpod_plate_detection_Min import find_lp_corner
 from LP_Detection.IWPOD_tf.src.keras_utils import load_model_tf
 from LP_Detection.VIN_LPD.VinLPD import load_model_VinLPD
 from LP_Recognition.VIN_OCR.VinOCR import load_model_VinOCR
-from Utils import imread_uni, save_json, imwrite_uni, iou_4corner
-from find_homography_iteratively import frontalization
+from Utils import imread_uni, imwrite_uni, iou_4corner, save_quad
+from labeling_utils import frontalization
 
 extensions = ['.jpg', '.png', '.xml', '.json']
 
@@ -91,23 +91,6 @@ def calculate_total_transformation(mat_A, mat_H):
     return mat_T
 
 
-def save_quad(dst_xy, plate_type, plate_number, path, imagePath, imageHeight, imageWidth):
-    shapes = []
-    quad_xy = dst_xy.tolist()
-    shape = dict(
-        label=plate_type + '_' + plate_number,
-        points=quad_xy[0],
-        group_id=None,
-        description='',
-        shape_type='polygon',
-        flags={},
-        mask=None
-    )
-    shapes.append(shape)
-
-    save_json(path, shapes, imagePath, imageHeight, imageWidth)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str, default='', help='Input Image folder')
@@ -155,7 +138,7 @@ if __name__ == '__main__':
         for _, bb_or_qb in enumerate(boxes):
             img_gened = generate_license_plate(generator, plate_type, plate_number)
             g_h, g_w = img_gened.shape[:2]
-            mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+            mask_text_area = calculate_text_area_coordinates(generator, plate_type)
             # mask_text_area = generator.get_text_area((g_h, g_w), plate_type)  # example
             img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
             pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)

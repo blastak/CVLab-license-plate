@@ -20,9 +20,11 @@ def load_model_VinLPD(path_base):
     return d_net
 
 
-def VIN_to_csv(prefix_path):
+def VIN_to_csv(prefix_path, d_net):
     img_paths = [p.resolve() for p in prefix_path.iterdir() if p.suffix == '.jpg']
-    d_net = load_model_VinLPD('./weight')
+
+    save_dir = prefix_path.parent / "VIN_csv"
+    save_dir.mkdir(parents=True, exist_ok=True)
 
     for _, img_path in enumerate(img_paths):
         img = imread_uni(img_path)
@@ -32,7 +34,7 @@ def VIN_to_csv(prefix_path):
             y.append([b.class_str, b.x, b.y, b.x + b.w, b.y, b.x + b.w, b.y + b.h, b.x, b.y + b.h, b.conf])
 
         base_name = img_path.stem
-        csv_filename = img_path.with_name(f"{base_name}.csv")
+        csv_filename = save_dir / f"{base_name}.csv"
         with open(csv_filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             for row in y:
@@ -56,4 +58,4 @@ if __name__ == '__main__':
     cv2.waitKey()
 
     # prefix_path = Path("../sample_image/testset")
-    # VIN_to_csv(prefix_path)
+    # VIN_to_csv(prefix_path, d_net)

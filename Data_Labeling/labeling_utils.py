@@ -31,7 +31,7 @@ def extract_N_track_features(img_gened, mask_text_area, img_front, plate_type):
     return pt1, pt2
 
 
-def calculate_text_area_coordinates(generator, shape, plate_type):
+def calculate_text_area_coordinates(generator, plate_type):
     number_area = generator.get_plate_number_area_only(plate_type)
     if plate_type == 'P1-2':
         margin = [-5, -10, 5, 10]
@@ -43,7 +43,7 @@ def calculate_text_area_coordinates(generator, shape, plate_type):
         margin = [-10, -10, 10, 10]
     min_x, min_y, max_x, max_y = map(int, [a + m for a, m in zip(number_area, margin)])
 
-    mask_text_area = np.zeros(shape[:2], dtype=np.uint8)
+    mask_text_area = np.zeros(generator.plate_wh[plate_type][::-1], dtype=np.uint8)
     mask_text_area[min_y:max_y, min_x:max_x] = 255
     return mask_text_area
 
@@ -71,7 +71,7 @@ def frontalization(img_big, bb_or_qb, gen_w, gen_h, mode=3):
 
 def find_total_transformation(img_gened, generator, plate_type, img, bb_or_qb):
     g_h, g_w = img_gened.shape[:2]
-    mask_text_area = calculate_text_area_coordinates(generator, (g_h, g_w), plate_type)
+    mask_text_area = calculate_text_area_coordinates(generator, plate_type)
     img_front, mat_A = frontalization(img, bb_or_qb, g_w, g_h)
     pt1, pt2 = extract_N_track_features(img_gened, mask_text_area, img_front, plate_type)
     mat_H, mat_T = find_homography_all(pt1, pt2, mat_A)
@@ -199,7 +199,7 @@ def detect_all(img, d_net, iwpod_tf):
     parallelograms, prob = find_lp_corner(img, iwpod_tf)
     if parallelograms:
         p = parallelograms[0]
-        qb_iwpod = Quadrilateral(p[0], p[1], p[2], p[3])  # ex) p[0] : (342.353, 454.223)
+        qb_iwpod = Quadrilateral(p[0], p[1], p[2], p[3])
         boxes.append(qb_iwpod)
 
     return boxes
