@@ -136,3 +136,15 @@ result = swapper.swap(A, B, M)
 - 검출 테스트: `LP_Detection/sample_image/`
 - 인식 테스트: `LP_Recognition/sample_image/`
 - 라벨 샘플: `Data_Labeling/Dataset_Loader/sample_image_label/`
+
+## 작업 규칙
+
+1. **한글 답변**: 모든 답변과 설명은 한글로 작성합니다.
+2. **코드 작성 규칙**:
+    - Python 코드는 영어로 작성
+    - 코드 내 주석은 한글로 상세히 작성
+3. **세션 시작**: Claude Code 세션이 시작될 때 항상 이 CLAUDE.md 파일을 먼저 읽어주세요.
+4. **Auto Compacting 후**: 메모리 정리(auto compacting) 이후에는 이전에 하던 작업을 리마인드해주세요.
+5. **날짜 시간 기록**: 작업내역을 업데이트할 때는 항상 현재 날짜와 시간을 조사하여 정확히 기입합니다.
+6. **최소 변경**: 스크립트를 새로 만들거나 파일을 수정할 때에는 가능하면 최소한의 변경만으로 진행합니다.
+7. **WSL Docker 환경**: 현재 작업환경이 WSL Ubuntu 내의 docker container이기 때문에 opencv 같은 GL 기반의 기술을 사용할 수 없고 다른 방식을 사용해야 합니다.

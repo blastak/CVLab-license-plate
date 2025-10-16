@@ -169,3 +169,12 @@ cython_debug/
 *.npz
 *.csv
 *.txt
+
+# OCR_comparison 결과 폴더 (2025-10-16 추가)
+OCR_comparison/output/
+OCR_comparison/output2/
+OCR_comparison/test_output_*.jpg
+OCR_comparison/*.xlsx
+
+# Evaluation 결과 폴더
+results/
