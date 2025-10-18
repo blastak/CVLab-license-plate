@@ -15,7 +15,7 @@ JSON 형태로 저장합니다.
 
 import argparse
 import json
-import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -127,15 +127,14 @@ def calculate_offset(reference_points, bbox_centers):
     if len(reference_points) == 0 or len(bbox_centers) == 0:
         return float('inf')
 
-    offset_sum = 0
-    # Hungarian Algorithm
+    # Hungarian Algorithm을 사용하여 최소 비용 매칭 계산
     cost_matrix = np.zeros((len(reference_points), len(bbox_centers)))
     for i, ref_point in enumerate(reference_points):
         for j, bbox_point in enumerate(bbox_centers):
             cost_matrix[i, j] = np.linalg.norm(ref_point - bbox_point)
+
     row_ind, col_ind = linear_sum_assignment(cost_matrix)
-    for r, c in zip(row_ind, col_ind):
-        offset_sum += cost_matrix[r, c]
+    offset_sum = sum(cost_matrix[r, c] for r, c in zip(row_ind, col_ind))
     return offset_sum
 
 
@@ -323,14 +322,12 @@ def refine_plate_coordinates(img, rough_quad, graphical_model, generator, ocr_re
     pt1, pt2 = extract_N_track_features_CHN(graphical_model, mask_text_area, img_front)
 
     if len(pt1) < 4:
-        print(f"  Feature 매칭 실패: {len(pt1)}개만 매칭됨")
         return None, img_front, float('inf')
 
     # 4. 반복적 RANSAC + adaptive threshold + absdiff 기반 최소 에러 호모그래피 계산
     mat_H = find_homography_with_minimum_error_CHN(graphical_model, mask_text_area, img_front, pt1, pt2)
 
     if mat_H is None:
-        print(f"  호모그래피 계산 실패")
         return None, img_front, float('inf')
 
     # 5. 전체 변환 행렬 계산 (Affine 역변환 @ Homography)
@@ -403,24 +400,36 @@ def create_labelme_json(img_filename, img_height, img_width, plate_type, plate_n
     return json_data
 
 
-def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_threshold=22):
+def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_threshold=44):
     """
     CCPD 데이터셋 전체를 처리하여 정밀 라벨링 수행
 
     Args:
         ccpd_dir: CCPD 데이터셋 경로
-        output_dir: 출력 디렉토리 (GoodMatches_CHN 등)
+        output_dir: 출력 디렉토리 (None인 경우 ccpd_dir과 동일)
         graphical_model_base_path: 중국 번호판 그래픽 모델 베이스 경로
-        error_threshold: OCR 에러 임계값 (픽셀 단위, 이 값 이하면 Front 폴더, 초과하면 etc 폴더)
+        error_threshold: OCR 에러 임계값 (이 값 이하: GoodMatches, 초과: BadMatches)
     """
-    # 출력 디렉토리 생성
-    output_goodmatches = Path(output_dir) / 'GoodMatches_CHN'
-    output_front = Path(output_dir) / f'GoodMatches_CHN_Front_H{int(error_threshold):02d}'
-    output_etc = Path(output_dir) / 'GoodMatches_CHN_etc'
+    # output_dir이 지정되지 않으면 ccpd_dir을 사용
+    if output_dir is None:
+        output_dir = ccpd_dir
 
+    # 출력 디렉토리 정의
+    output_goodmatches = Path(output_dir) / f'GoodMatches_H{int(error_threshold):02d}'
+    output_front = Path(output_dir) / f'GoodMatches_H{int(error_threshold):02d}_Front'
+    output_badmatches = Path(output_dir) / f'BadMatches_H{int(error_threshold):02d}'
+    output_bad_front = Path(output_dir) / f'BadMatches_H{int(error_threshold):02d}_Front'
+
+    # 기존 폴더 삭제 (clean start)
+    for folder in [output_goodmatches, output_front, output_badmatches, output_bad_front]:
+        if folder.exists():
+            shutil.rmtree(folder)
+
+    # 출력 디렉토리 생성
     output_goodmatches.mkdir(parents=True, exist_ok=True)
     output_front.mkdir(parents=True, exist_ok=True)
-    output_etc.mkdir(parents=True, exist_ok=True)
+    output_badmatches.mkdir(parents=True, exist_ok=True)
+    output_bad_front.mkdir(parents=True, exist_ok=True)
 
     # 데이터 로더 및 그래픽 모델 생성기 초기화
     loader = DatasetLoader_CCPD(ccpd_dir)
@@ -438,16 +447,17 @@ def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_
     img_files = sorted([f for f in ccpd_path.glob('*.jpg')])
 
     print(f"총 {len(img_files)}개 파일 처리 시작")
-    print(f"출력 경로: {output_goodmatches}")
-    print(f"Front 경로: {output_front}")
-    print(f"Etc 경로: {output_etc}")
+    print(f"GoodMatches 경로: {output_goodmatches}")
+    print(f"GoodMatches Front 경로: {output_front}")
+    print(f"BadMatches 경로: {output_badmatches}")
+    print(f"BadMatches Front 경로: {output_bad_front}")
     print(f"에러 임계값: {error_threshold}")
 
     success_count = 0
     fail_count = 0
     use_rough_count = 0
-    front_count = 0
-    etc_count = 0
+    good_count = 0
+    bad_count = 0
 
     for img_file in tqdm(img_files, desc="CCPD 라벨링"):
         try:
@@ -457,14 +467,12 @@ def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_
                 loader.parse_ccpd_filename(img_filename)
 
             if plate_number == '' or len(xy1) == 0:
-                print(f"파싱 실패: {img_filename}")
                 fail_count += 1
                 continue
 
             # 2. 이미지 로드
             img = imread_uni(str(img_file))
             if img is None:
-                print(f"이미지 로드 실패: {img_filename}")
                 fail_count += 1
                 continue
 
@@ -473,7 +481,6 @@ def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_
             # 3. 그래픽 모델 생성
             graphical_model_2x = generator.make_LP(plate_number)
             if graphical_model_2x is None:
-                print(f"그래픽 모델 생성 실패: {plate_number}")
                 fail_count += 1
                 continue
 
@@ -491,49 +498,53 @@ def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_
             if coords_result is not None:
                 refined_xy1, refined_xy2, refined_xy3, refined_xy4 = coords_result
             else:
-                # 실패 시 러프한 좌표 사용
-                print(f"  러프한 좌표 사용: {img_filename}")
+                # 정밀화 실패 시 러프한 좌표 사용 (BadMatches로 분류)
                 refined_xy1, refined_xy2, refined_xy3, refined_xy4 = xy1, xy2, xy3, xy4
                 use_rough_count += 1
+                error_value = float('inf')  # 무한대로 설정하여 BadMatches로 분류
 
-            # 6. JSON 생성 및 저장 (GoodMatches_CHN)
+            # 6. JSON 생성
             json_data = create_labelme_json(
                 img_filename, img_height, img_width,
                 plate_type, plate_number,
                 refined_xy1, refined_xy2, refined_xy3, refined_xy4
             )
-
             json_filename = img_file.stem + '.json'
-            json_path = output_goodmatches / json_filename
-            jpg_path = output_goodmatches / img_filename
 
-            # JSON 저장
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(json_data, f, ensure_ascii=False, indent=2)
-
-            # 이미지 복사
-            imwrite_uni(str(jpg_path), img)
-
-            # 7. Frontalization 이미지 저장 (threshold 기반 분류)
-            front_filename = f'front_{img_filename}'
-
+            # 7. threshold 기반 분류 및 저장
             if error_value <= error_threshold:
-                # 에러가 작으면 Front 폴더에 저장
+                # threshold 이하: GoodMatches 폴더에 저장
+                # 원본 이미지 + JSON
+                json_path = output_goodmatches / json_filename
+                jpg_path = output_goodmatches / img_filename
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(json_data, f, ensure_ascii=False, indent=2)
+                imwrite_uni(str(jpg_path), img)
+
+                # frontalization 이미지만 (JSON 없음)
+                front_filename = f'front_{img_filename}'
                 front_path = output_front / front_filename
                 imwrite_uni(str(front_path), img_front)
-                front_count += 1
+                good_count += 1
             else:
-                # 에러가 크면 etc 폴더에 저장
-                etc_path = output_etc / front_filename
-                imwrite_uni(str(etc_path), img_front)
-                etc_count += 1
+                # threshold 초과: BadMatches 폴더에 저장
+                # 원본 이미지 + JSON
+                json_path = output_badmatches / json_filename
+                jpg_path = output_badmatches / img_filename
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(json_data, f, ensure_ascii=False, indent=2)
+                imwrite_uni(str(jpg_path), img)
+
+                # frontalization 이미지만 (JSON 없음)
+                front_filename = f'front_{img_filename}'
+                bad_front_path = output_bad_front / front_filename
+                imwrite_uni(str(bad_front_path), img_front)
+                bad_count += 1
 
             success_count += 1
 
-        except Exception as e:
-            print(f"처리 중 오류 ({img_filename}): {str(e)}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # 오류 발생 시 조용히 실패 카운트만 증가
             fail_count += 1
             continue
 
@@ -541,12 +552,14 @@ def process_ccpd_dataset(ccpd_dir, output_dir, graphical_model_base_path, error_
     print(f"성공: {success_count}개")
     print(f"  - 정밀 좌표: {success_count - use_rough_count}개")
     print(f"  - 러프 좌표: {use_rough_count}개")
-    print(f"  - Front (에러 ≤ {error_threshold}): {front_count}개")
-    print(f"  - Etc (에러 > {error_threshold}): {etc_count}개")
+    print(f"  - GoodMatches (에러 ≤ {error_threshold}): {good_count}개")
+    print(f"  - BadMatches (에러 > {error_threshold}): {bad_count}개")
     print(f"실패: {fail_count}개")
-    print(f"출력 경로: {output_goodmatches}")
-    print(f"Front 경로: {output_front}")
-    print(f"Etc 경로: {output_etc}")
+    print(f"\n생성된 폴더:")
+    print(f"  GoodMatches_H{int(error_threshold):02d}: {output_goodmatches} ({good_count}개 원본+JSON)")
+    print(f"  GoodMatches_H{int(error_threshold):02d}_Front: {output_front} ({good_count}개 frontalization)")
+    print(f"  BadMatches_H{int(error_threshold):02d}: {output_badmatches} ({bad_count}개 원본+JSON)")
+    print(f"  BadMatches_H{int(error_threshold):02d}_Front: {output_bad_front} ({bad_count}개 frontalization)")
 
 
 if __name__ == '__main__':
@@ -560,8 +573,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output_dir',
         type=str,
-        default='/workspace/repo/CVLab-license-plate/Data_Labeling',
-        help='출력 디렉토리 경로 (GoodMatches_CHN 폴더가 생성됨)'
+        default=None,
+        help='출력 디렉토리 경로 (미지정 시 ccpd_dir과 동일하게 설정됨)'
     )
     parser.add_argument(
         '--graphical_model_path',
@@ -572,8 +585,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--error_threshold',
         type=float,
-        default=22,
-        help='OCR 에러 임계값 (픽셀 단위, 이 값 이하면 Front 폴더, 초과하면 etc 폴더)'
+        default=44,
+        help='OCR 에러 임계값 (이 값 이하: GoodMatches, 초과: BadMatches)'
     )
 
     args = parser.parse_args()

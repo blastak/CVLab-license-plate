@@ -179,7 +179,3 @@ OCR_comparison/*.xlsx
 # Evaluation 결과 폴더
 results/
 
-# CCPD 라벨링 결과 폴더 (2025-10-18 추가)
-Data_Labeling/GoodMatches_CHN/
-Data_Labeling/GoodMatches_CHN_Front_*/
-Data_Labeling/GoodMatches_CHN_etc/
