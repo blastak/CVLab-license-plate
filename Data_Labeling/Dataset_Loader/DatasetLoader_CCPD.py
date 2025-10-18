@@ -25,11 +25,11 @@ class DatasetLoader_CCPD:
             tokens = img_filename[:-4].split('-')
 
             # 4개 꼭지점 좌표 추출 (기존 로직 그대로)
-            xy1, xy2, xy3, xy4 = (a.split('&') for a in tokens[3].split('_'))
-            xy1 = list(map(float, xy1))  # float으로 변경 (WebCrawl 호환)
-            xy2 = list(map(float, xy2))
-            xy3 = list(map(float, xy3))
-            xy4 = list(map(float, xy4))
+            xy1_, xy2_, xy3_, xy4_ = (a.split('&') for a in tokens[3].split('_'))
+            xy3 = list(map(float, xy1_))  # float으로 변경 (WebCrawl 호환), 순서 변경 3,4,1,2 -> 1,2,3,4
+            xy4 = list(map(float, xy2_))
+            xy1 = list(map(float, xy3_))
+            xy2 = list(map(float, xy4_))
 
             # Bounding box 계산 (기존 로직 활용)
             bb_lt, bb_rb = (a.split('&') for a in tokens[2].split('_'))
