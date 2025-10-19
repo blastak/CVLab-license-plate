@@ -311,9 +311,9 @@ def refine_plate_coordinates(img, rough_quad, graphical_model, generator, ocr_re
     """
     g_h, g_w = graphical_model.shape[:2]
 
-    # 1. 정면화 (frontalization) - mode=3은 Affine 변환 (3점 기반)
+    # 1. 정면화 (frontalization) - mode=4는 Perspective 변환 (4점 기반)
     # rough_quad가 Quadrilateral인 경우 처리
-    img_front, mat_A = frontalization(img, rough_quad, g_w, g_h, mode=3)
+    img_front, mat_A = frontalization(img, rough_quad, g_w, g_h, mode=4)
 
     # 2. 텍스트 영역 마스크 생성
     mask_text_area = calculate_text_area_coordinates_CHN(generator)
@@ -349,10 +349,15 @@ def refine_plate_coordinates(img, rough_quad, graphical_model, generator, ocr_re
     xy3 = refined_corners[2].tolist()
     xy4 = refined_corners[3].tolist()
 
-    # 7. OCR 기반 에러 계산 (frontalization된 이미지에서)
-    ocr_error = calculate_ocr_error_CHN(img_front, generator, ocr_reader, plate_number)
+    # 7. 정밀한 좌표로 frontalization 이미지 재생성
+    # refined_corners로 Quadrilateral 생성 후 다시 frontalization
+    refined_quad = Quadrilateral(xy1, xy2, xy3, xy4)
+    img_front_refined, _ = frontalization(img, refined_quad, g_w, g_h, mode=4)
 
-    return (xy1, xy2, xy3, xy4), img_front, ocr_error
+    # 8. OCR 기반 에러 계산 (정밀한 frontalization 이미지에서)
+    ocr_error = calculate_ocr_error_CHN(img_front_refined, generator, ocr_reader, plate_number)
+
+    return (xy1, xy2, xy3, xy4), img_front_refined, ocr_error
 
 
 def create_labelme_json(img_filename, img_height, img_width, plate_type, plate_number, xy1, xy2, xy3, xy4):
@@ -585,7 +590,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--error_threshold',
         type=float,
-        default=44,
+        default=22,
         help='OCR 에러 임계값 (이 값 이하: GoodMatches, 초과: BadMatches)'
     )
 
