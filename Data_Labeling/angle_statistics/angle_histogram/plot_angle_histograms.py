@@ -52,9 +52,13 @@ def read_csv_data(csv_path):
     return data_rows
 
 
-def load_all_csv_files(data_dir):
+def load_all_csv_files(data_dir, pattern='*.csv'):
     """
-    디렉토리의 모든 CSV 파일 로드
+    디렉토리의 CSV 파일 로드 (패턴 매칭)
+
+    Args:
+        data_dir: CSV 파일이 있는 디렉토리
+        pattern: glob 패턴 (기본값: '*.csv')
 
     Returns:
         dict: {
@@ -63,7 +67,7 @@ def load_all_csv_files(data_dir):
             'solvepnp_normal_method': []
         }
     """
-    csv_files = sorted(Path(data_dir).glob('*.csv'))
+    csv_files = sorted(Path(data_dir).glob(pattern))
 
     if not csv_files:
         print(f"❌ CSV 파일을 찾을 수 없습니다: {data_dir}")
@@ -265,13 +269,20 @@ def main():
         choices=['pdf', 'png', 'svg'],
         help='출력 파일 형식 (기본값: pdf)'
     )
+    parser.add_argument(
+        '--pattern',
+        type=str,
+        default='*.csv',
+        help='CSV 파일 패턴 (기본값: *.csv, 예시: WebPlatemania_*.csv)'
+    )
 
     args = parser.parse_args()
 
     print("=" * 80)
-    print("📊 CCPD2019 각도 분포 히스토그램 생성")
+    print("📊 번호판 각도 분포 히스토그램 생성")
     print("=" * 80)
     print(f"📁 데이터 디렉토리: {args.data_dir}")
+    print(f"🔍 파일 패턴: {args.pattern}")
     print(f"📊 Bin 개수: {args.bins}")
     print(f"💾 출력 디렉토리: {args.output_dir}")
     print(f"📄 출력 형식: {args.format}")
@@ -279,7 +290,7 @@ def main():
     print()
 
     # CSV 데이터 로드
-    data = load_all_csv_files(args.data_dir)
+    data = load_all_csv_files(args.data_dir, pattern=args.pattern)
 
     if data is None:
         return

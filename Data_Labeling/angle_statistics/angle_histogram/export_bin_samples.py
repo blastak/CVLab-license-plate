@@ -50,14 +50,18 @@ def read_csv_data(csv_path):
     return data_rows
 
 
-def load_all_csv_files(data_dir):
+def load_all_csv_files(data_dir, pattern='*.csv'):
     """
-    디렉토리의 모든 CSV 파일 로드
+    디렉토리의 CSV 파일 로드 (패턴 매칭)
+
+    Args:
+        data_dir: CSV 파일이 있는 디렉토리
+        pattern: glob 패턴 (기본값: '*.csv')
 
     Returns:
         list: [(csv_name, filename, sqrt, arccos, solvepnp), ...]
     """
-    csv_files = sorted(Path(data_dir).glob('*.csv'))
+    csv_files = sorted(Path(data_dir).glob(pattern))
 
     if not csv_files:
         print(f"❌ CSV 파일을 찾을 수 없습니다: {data_dir}")
@@ -88,16 +92,35 @@ def load_all_csv_files(data_dir):
 
 def find_image_path(csv_name, filename, base_dir='/workspace/DB/01_LicensePlate/CCPD2019'):
     """
-    이미지 파일 경로 찾기
+    이미지 파일 경로 찾기 (CCPD2019 및 WebPlatemania 지원)
 
     Args:
-        csv_name: CSV 이름 (예: ccpd_weather)
+        csv_name: CSV 이름 (예: ccpd_weather, WebPlatemania_P1-1)
         filename: 이미지 파일명
-        base_dir: CCPD2019 기본 디렉토리
+        base_dir: 이미지 기본 디렉토리 (데이터셋에 따라 다름)
 
     Returns:
         Path or None: 이미지 파일 경로
     """
+    # WebPlatemania 데이터셋인 경우
+    if csv_name.startswith('WebPlatemania_'):
+        # csv_name: "WebPlatemania_P1-1" -> "P1-1"
+        plate_type = csv_name.replace('WebPlatemania_', '')
+        webplatemania_dir = '/workspace/DB/01_LicensePlate/55_WebPlatemania_jpg_json_20250407'
+        image_path = Path(webplatemania_dir) / f'GoodMatches_{plate_type}' / filename
+
+        if image_path.exists():
+            return image_path
+
+        # .jpg 확장자 추가 시도
+        if not filename.endswith('.jpg'):
+            image_path = Path(webplatemania_dir) / f'GoodMatches_{plate_type}' / f"{filename}.jpg"
+            if image_path.exists():
+                return image_path
+
+        return None
+
+    # CCPD2019 데이터셋인 경우
     # 예상 경로: /workspace/DB/01_LicensePlate/CCPD2019/ccpd_weather/GoodMatches_H22/파일명
     image_path = Path(base_dir) / csv_name / 'GoodMatches_H22' / filename
 
@@ -264,6 +287,12 @@ def main():
         default='bin_samples',
         help='출력 디렉토리 (기본값: bin_samples)'
     )
+    parser.add_argument(
+        '--pattern',
+        type=str,
+        default='*.csv',
+        help='CSV 파일 패턴 (기본값: *.csv, 예시: WebPlatemania_*.csv)'
+    )
 
     args = parser.parse_args()
 
@@ -271,6 +300,7 @@ def main():
     print("🖼️  히스토그램 bin별 샘플 이미지 추출")
     print("=" * 80)
     print(f"📁 CSV 디렉토리: {args.data_dir}")
+    print(f"🔍 파일 패턴: {args.pattern}")
     print(f"📁 이미지 디렉토리: {args.base_dir}")
     print(f"📊 방법: {args.method}")
     print(f"📊 Bin 개수: {args.bins}")
@@ -280,7 +310,7 @@ def main():
     print()
 
     # CSV 데이터 로드
-    data = load_all_csv_files(args.data_dir)
+    data = load_all_csv_files(args.data_dir, pattern=args.pattern)
 
     if data is None:
         return

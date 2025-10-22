@@ -182,6 +182,6 @@ results/
 # Data_Labeling 각도 분석 및 통계 출력 파일들
 Data_Labeling/angle_statistics/*.csv
 Data_Labeling/angle_statistics/*.txt
-Data_Labeling/angle_statistics/angle_histogram/*.pdf
-Data_Labeling/angle_statistics/angle_histogram/bin_samples/
+Data_Labeling/angle_statistics/angle_histogram/ccpd/
+Data_Labeling/angle_statistics/angle_histogram/webplatemania/
 

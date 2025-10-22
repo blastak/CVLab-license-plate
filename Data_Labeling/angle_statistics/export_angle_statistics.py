@@ -30,20 +30,31 @@ from pathlib import Path
 from typing import Tuple, Optional
 
 
-def extract_plate_type(filename: str, country: str) -> str:
+def extract_plate_type(filename: str, country: str, json_data: Optional[dict] = None) -> str:
     """
-    파일명에서 번호판 타입 추출
+    JSON label 필드 또는 파일명에서 번호판 타입 추출
 
     Args:
-        filename: 파일명 (예: "14112898_P2_71거1377.jpg")
+        filename: 파일명 (예: "14112898_P2_71거1377.jpg" 또는 "20250407_162943_327.json")
         country: 'KOR' 또는 'CHN'
+        json_data: JSON 데이터 (선택, label 필드에서 타입 추출 시도)
 
     Returns:
-        plate_type: 한국은 P1, P2, P3, P4 등 / 중국은 'CHN'
+        plate_type: 한국은 P1, P2, P3, P4 등 (예: "P1-1", "P2") / 중국은 'CHN'
     """
     if country == 'CHN':
         return 'CHN'
 
+    # 1. JSON label 필드에서 타입 추출 시도 (우선순위)
+    if json_data and 'shapes' in json_data and json_data['shapes']:
+        label = json_data['shapes'][0].get('label', '')
+        if label and '_' in label:
+            # "P1-1_11거7111" 형식에서 "P1-1" 추출
+            plate_type = label.split('_')[0]
+            if plate_type.startswith('P'):
+                return plate_type
+
+    # 2. 파일명에서 타입 추출 시도 (폴백)
     # 한국 번호판: P숫자 또는 P숫자-숫자 패턴 찾기
     pattern = r'_P(\d+)(?:-\d+)?_'
     match = re.search(pattern, filename)
@@ -53,7 +64,7 @@ def extract_plate_type(filename: str, country: str) -> str:
         return f"P{plate_number}"
 
     # 패턴을 찾지 못한 경우 기본값
-    print(f"⚠️  파일명에서 번호판 타입을 찾을 수 없음: {filename}, 기본값 P2 사용")
+    print(f"⚠️  파일명과 JSON label에서 번호판 타입을 찾을 수 없음: {filename}, 기본값 P2 사용")
     return "P2"
 
 
@@ -62,7 +73,7 @@ def get_plate_dimensions(plate_type: str) -> Tuple[float, float]:
     번호판 타입에 따른 실제 크기 반환
 
     Args:
-        plate_type: P1, P2, P3, P4, CHN
+        plate_type: P1, P2, P3, P4, CHN 또는 P1-1, P1-2 등 상세 타입
 
     Returns:
         (width, height): 너비, 높이 (mm)
@@ -76,8 +87,11 @@ def get_plate_dimensions(plate_type: str) -> Tuple[float, float]:
         'CHN': (440.0, 140.0), # 중국 번호판
     }
 
-    if plate_type in plate_dimensions:
-        return plate_dimensions[plate_type]
+    # 상세 타입 (P1-1, P1-2 등)을 기본 타입 (P1)으로 변환
+    base_type = plate_type.split('-')[0] if '-' in plate_type else plate_type
+
+    if base_type in plate_dimensions:
+        return plate_dimensions[base_type]
     else:
         print(f"⚠️  알 수 없는 번호판 타입: {plate_type}, 기본값 P2 사용")
         return plate_dimensions['P2']
@@ -240,9 +254,9 @@ def process_image_pair(json_path: str, image_path: str, country: str):
     # JSON 데이터 로드
     data = load_json(json_path)
 
-    # 파일명에서 번호판 타입 추출
+    # JSON label 필드 또는 파일명에서 번호판 타입 추출
     filename = os.path.basename(json_path)
-    plate_type = extract_plate_type(filename, country)
+    plate_type = extract_plate_type(filename, country, data)
     plate_width, plate_height = get_plate_dimensions(plate_type)
 
     # 코너 좌표 추출
