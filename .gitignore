@@ -179,3 +179,7 @@ OCR_comparison/*.xlsx
 # Evaluation 결과 폴더
 results/
 
+# Data_Labeling 각도 히스토그램 출력 파일들
+Data_Labeling/angle_histogram/*.pdf
+Data_Labeling/angle_histogram/bin_samples/
+
