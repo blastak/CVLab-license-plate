@@ -184,4 +184,5 @@ Data_Labeling/angle_statistics/*.csv
 Data_Labeling/angle_statistics/*.txt
 Data_Labeling/angle_statistics/angle_histogram/ccpd/
 Data_Labeling/angle_statistics/angle_histogram/webplatemania/
+Data_Labeling/angle_statistics/top_*_*/
 
