@@ -2,7 +2,7 @@
 번호판 각도 계산 및 CSV 생성 스크립트
 
 solvePnP 기반으로 번호판의 3D 회전 각도(X, Y, Z)를 계산하고,
-세 가지 방식(sqrt, arccos, solvepnp_normal)으로 조합 각도를 계산하여 CSV로 저장합니다.
+세 가지 방식(sqrt, arccos, normvec_camaxis)으로 조합 각도를 계산하여 CSV로 저장합니다.
 
 주요 기능:
 - 번호판 타입별 실제 크기 적용 (한국: P1~P4, 중국: CHN)
@@ -10,7 +10,7 @@ solvePnP 기반으로 번호판의 3D 회전 각도(X, Y, Z)를 계산하고,
 - 3가지 조합 각도 계산 방식 제공
   1. sqrt_method: sqrt(x² + y² + z²) - 3D 벡터 크기
   2. arccos_method: arccos(cos(x) * cos(y) * cos(z)) - 방향 코사인
-  3. solvepnp_normal_method: 번호판 법선과 카메라 광축 사이 각도
+  3. normvec_camaxis_method: 번호판 법선과 카메라 광축 사이 각도
 
 사용 예시:
     python export_angle_statistics.py --dir /path/to/dataset --country CHN
@@ -200,7 +200,7 @@ def calculate_combined_angles(angles_in_deg):
     X, Y, Z 각도를 조합하여 단일 각도 계산 (세 가지 방식)
 
     Returns:
-        tuple: (sqrt_method, arccos_method, solvepnp_normal_method) 조합된 각도들 (도 단위)
+        tuple: (sqrt_method, arccos_method, normvec_camaxis_method) 조합된 각도들 (도 단위)
     """
     # 도를 라디안으로 변환
     x_rad = math.radians(angles_in_deg[0])
@@ -239,9 +239,9 @@ def calculate_combined_angles(angles_in_deg):
     dot_product = max(-1.0, min(1.0, dot_product))  # 수치 오류 방지
 
     # 각도 계산 (절댓값 사용하여 0-90도 범위로 제한)
-    solvepnp_normal_method = math.degrees(math.acos(abs(dot_product)))
+    normvec_camaxis_method = math.degrees(math.acos(abs(dot_product)))
 
-    return sqrt_method, arccos_method, solvepnp_normal_method
+    return sqrt_method, arccos_method, normvec_camaxis_method
 
 
 def process_image_pair(json_path: str, image_path: str, country: str):
@@ -249,7 +249,7 @@ def process_image_pair(json_path: str, image_path: str, country: str):
 
     Returns:
         tuple: (plate_type, plate_dims, angles_in_deg, sqrt_method, arccos_method,
-                solvepnp_normal_method) 또는 None (실패 시)
+                normvec_camaxis_method) 또는 None (실패 시)
     """
     # JSON 데이터 로드
     data = load_json(json_path)
@@ -279,10 +279,10 @@ def process_image_pair(json_path: str, image_path: str, country: str):
     )
 
     # 2. 조합된 각도 계산 (3가지 방식)
-    sqrt_method, arccos_method, solvepnp_normal_method = calculate_combined_angles(angles_in_deg)
+    sqrt_method, arccos_method, normvec_camaxis_method = calculate_combined_angles(angles_in_deg)
 
     return (plate_type, (plate_width, plate_height), angles_in_deg,
-            sqrt_method, arccos_method, solvepnp_normal_method)
+            sqrt_method, arccos_method, normvec_camaxis_method)
 
 
 def main():
@@ -372,7 +372,7 @@ def main():
             continue
 
         (plate_type, plate_dims, angles_in_deg, sqrt_method,
-         arccos_method, solvepnp_normal_method) = result
+         arccos_method, normvec_camaxis_method) = result
         success_count += 1
 
         # 번호판 타입별 통계 수집
@@ -390,7 +390,7 @@ def main():
             round(angles_in_deg[2], 2),
             round(sqrt_method, 2),
             round(arccos_method, 2),
-            round(solvepnp_normal_method, 2)
+            round(normvec_camaxis_method, 2)
         ])
 
         # 간략한 진행상황 출력 (매 100개마다)
@@ -413,7 +413,7 @@ def main():
         writer.writerow([
             'filename', 'plate_type', 'dimensions',
             'x_deg', 'y_deg', 'z_deg',
-            'sqrt_method', 'arccos_method', 'solvepnp_normal_method'
+            'sqrt_method', 'arccos_method', 'normvec_camaxis_method'
         ])
         # 데이터 작성
         writer.writerows(csv_data)
