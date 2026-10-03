@@ -156,14 +156,19 @@ def get_method_column_index(headers, method):
     method_map = {
         'sqrt': 'sqrt_method',
         'arccos': 'arccos_method',
-        'solvepnp': 'solvepnp_normal_method'
+        'solvepnp': 'normvec_camaxis_method'
     }
+    # 이전 CSV 호환: 컬럼명이 solvepnp_normal_method -> normvec_camaxis_method로 변경됨
+    legacy_map = {'normvec_camaxis_method': 'solvepnp_normal_method'}
 
     target_column = method_map.get(method)
     if target_column is None:
         print(f"❌ 알 수 없는 메소드: {method}")
         print(f"   사용 가능한 메소드: {', '.join(method_map.keys())}")
         sys.exit(1)
+
+    if target_column not in headers and legacy_map.get(target_column) in headers:
+        target_column = legacy_map[target_column]
 
     try:
         return headers.index(target_column)
@@ -426,7 +431,7 @@ def run_single_file_mode(args):
         z_idx = headers.index('z_deg')
         sqrt_idx = headers.index('sqrt_method')
         arccos_idx = headers.index('arccos_method')
-        solvepnp_idx = headers.index('solvepnp_normal_method')
+        solvepnp_idx = get_method_column_index(headers, 'solvepnp')
 
         for rank, row in enumerate(top_rows, 1):
             # 현재 정렬 기준인 메소드 값을 강조 표시
